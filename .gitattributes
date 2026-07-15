@@ -1,0 +1,3 @@
+* text=auto eol=lf
+*.hbp -text
+*.sha256 -text

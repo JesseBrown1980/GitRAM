@@ -1,0 +1,5 @@
+GITRAM-GENESIS|date=2026-07-15|seat=ACER-CLAUDE-FABLE5|seat_pid=8467a937cba309f7|glyph=BH1024:SEAT-FABLE5|owner=OP-JESSE|repo=JesseBrown1980/GitRAM|purpose=instructions-and-template-for-gitram-only|json=0
+GITRAM-ORIGIN|origin_repo=JesseBrown1980/HYPER-BECHS--the-third-set|origin_pr=42|origin_branch=agent/liris-pais-gitram-floor1-20260715|origin_commit=94718f8f78ea|origin_seat=LIRIS|origin_date=2026-07-15T12:28Z|json=0
+GITRAM-FIRSTRUN|run_id=29415341620|cube_jobs=27|cube_jobs_ok=27|artifacts_uploaded=27|receipt_integrity=success|fanin=cancelled|fanin_exit=143|fanin_elapsed_min=23|fanin_timeout_min=60|fanin_verified=cube01-cube14|omega_sealed=0|tag=MEASURED|json=0
+GITRAM-COMPANION|repo=JesseBrown1980/Metatagging-data-for-a-Quantum-universe|pr=5|ci=3of3_success|floor1_verification=success|claims_ledger=all_zero|tag=MEASURED|json=0
+GITRAM-LAW|l1=cells_stateless_selfcontained|l2=artifacts_are_the_memory_bus|l3=fanin_all_or_nothing_no_duplicate_work|l4=claims_from_owning_gate_only|l5=one_floor_only_higher_floors_held|l6=independent_of_local_lanes|json=0
