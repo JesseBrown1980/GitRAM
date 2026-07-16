@@ -1,0 +1,8 @@
+HBIROW|kind=emitter|seed=be80843b5ce5de04|chain=pid[n]=sha16(pid[n-1]|name)|json=0
+EMIT|family=gitram|name=gitram-repo-live|pid=da6e3a98d6d8779e|json=0
+EMIT|family=gitram|name=floor1-omega-sealed|pid=617c73d050be9882|json=0
+EMIT|family=gitram|name=floor2-contract|pid=9850ba23fbe68990|json=0
+EMIT|family=gitram|name=floor2-branch-pushed|pid=d166751e70abadc7|json=0
+EMIT|family=gitram|name=floor2-local-greens|pid=1e08312262d926e8|json=0
+EMIT|family=gitram|name=leaf-predictions|pid=855c4a6c6fdcc17b|json=0
+EMIT|family=gitram|name=workflow-scope-blocker|pid=9f018a83148de4c0|json=0
