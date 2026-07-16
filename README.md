@@ -61,13 +61,21 @@ The first GitRAM lane ran on 2026-07-15 in
 trained one balanced all-byte Pais cube through 8 reversible representations × 10
 predictor functions × 10 persistent epochs = 800 measured cells per cube.
 
-Run `29415341620`: **27/27 cube jobs succeeded** (~1.5–3.5 min each), **27/27 artifacts
+Attempt 1 of run `29415341620`: **27/27 cube jobs succeeded** (~1.5–3.5 min each), **27/27 artifacts
 uploaded**, receipt-integrity green. The fan-in ("Verify 27 checkpoints and seal
 floor-one Omega") was **cancelled** (SIGTERM, exit 143) 23 minutes in, after verifying
 cubes 01–14 of 27 — not a timeout (its limit was 60 min) and not a concurrency cancel
-(`cancel-in-progress: false`). **The floor-one Omega is therefore NOT yet sealed**; the
+(`cancel-in-progress: false`). **At the end of attempt 1, the floor-one Omega was not yet sealed**; the
 27 checkpoints remain in artifacts and the seal is one fan-in re-run away.
 Full receipt: [`docs/FIRST-DEPLOYMENT-PR42.md`](docs/FIRST-DEPLOYMENT-PR42.md).
+
+Current state correction (MEASURED_GITHUB, LIRIS, 2026-07-16): attempt 2 reused the
+27 checkpoints, completed the fan-in successfully in 31m52s, and sealed
+`pais-omega-floor1-sealed` (artifact `8355679931`, 78,509,913 bytes; artifact digest
+`sha256:7d24fdaabc05bf61db7488865311a62ddfdce7683b34da594279b9deeb2c381e`).
+The final gate reported `PAIS_FLOOR_PASS|cubes=27|cells=21600`; the floor-one Omega is
+sealed at the owning GitHub gate. See
+[`receipts/GITRAM-FIRST-DEPLOYMENT-ATTEMPT2-20260716.hbp`](receipts/GITRAM-FIRST-DEPLOYMENT-ATTEMPT2-20260716.hbp).
 
 ## Boundaries (held, by design)
 
