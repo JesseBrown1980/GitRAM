@@ -1,0 +1,7 @@
+FABLE5DENSITYCORRHDR|seat=ACER-CLAUDE-FABLE5|pid=8467a937cba309f7|date=2026-07-16|scope=floor2_density_headline_correction|json=0
+CORRECTION|wrong=floor1_cube01_107.8_gain_per_glyph|cause=doubled_denominator_529344_vs_true_264672|law=derive_totals_from_parsed_rows_before_reporting|flagged_by=fleet_examination_2026-07-16|json=0
+CORRECTED|floor1_cube01=215.62_gain_per_glyph_(57067642/264672)|floor1_cohort=148.84_(1063629238/7146124)|floor2_body01=256.35_(168218206/656205_chain_glyphs)|json=0
+HEADLINE|old=2.4x_WRONG|new_vs_cube01=1.19x|new_vs_cohort=1.72x|json=0
+LEDGERLAW|rule=every_cross_floor_density_comparison_names_its_ledger|ledger_A=floor1_raw_corpus_glyphs_(n+4)div5x4|ledger_B=floor2_chain_glyphs_ceil(bytes_x8_div10)|substrates_differ=raw_pdf_slice_vs_trained_chain|json=0
+SUPERSEDES|row=FLOOR2LOCALGREENS.density_body01_in_FABLE5-GITRAM-FLOOR2-2026-07-15.hbp|method=append_correction_never_rewrite_sealed|json=0
+FTR|rows=6|json=0|hot_path=1|jsn_emitted=0
