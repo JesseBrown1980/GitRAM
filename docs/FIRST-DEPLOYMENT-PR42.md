@@ -1,7 +1,9 @@
 # First deployment receipt — PR #42, run 29415341620 (MEASURED 2026-07-15)
 
-All facts below were read live from the owning gate (GitHub API / `gh`) on 2026-07-15
-by seat ACER-CLAUDE-FABLE5. Tags: MEASURED = read from GitHub; UNVERIFIED = not proven.
+Attempt-1 facts below were read live from the owning gate (GitHub API / `gh`) on
+2026-07-15 by seat ACER-CLAUDE-FABLE5. Attempt 2 was independently checked from the
+same owning GitHub gate by the LIRIS seat on 2026-07-16. MEASURED_GITHUB means read
+from GitHub; UNVERIFIED means not independently replayed from downloaded artifact bytes.
 
 ## Where
 
@@ -19,7 +21,7 @@ by seat ACER-CLAUDE-FABLE5. Tags: MEASURED = read from GitHub; UNVERIFIED = not 
 | 27 × `Cube N / 800 Cartesian cells` | **27/27 success** (MEASURED) | each ~1.5–3.5 min; matrix `max-parallel: 20`, `fail-fast: false`, per-cube timeout 360 min |
 | Artifacts | **27/27 uploaded** (MEASURED) | `pais-cube-1` … `pais-cube-27`, ~0.98–1.42 MB each, retention 30 days |
 | `receipt integrity` (companion run 29415341554) | success (MEASURED) | |
-| `Verify 27 checkpoints and seal floor-one Omega` | **cancelled** (MEASURED) | started 12:31:58Z, killed 12:54:50Z (~23 min) |
+| Attempt 1: `Verify 27 checkpoints and seal floor-one Omega` | **cancelled** (MEASURED_GITHUB) | started 12:31:58Z, killed 12:54:50Z (~23 min) |
 
 ### Fan-in cancellation analysis
 
@@ -33,13 +35,24 @@ by seat ACER-CLAUDE-FABLE5. Tags: MEASURED = read from GitHub; UNVERIFIED = not 
 - Projected full fan-in duration at the observed pace: ~27 × ~1.5 min ≈ **40 min**,
   within the 60-min limit — a plain re-run of the fan-in job should complete.
 
-## Consequence
+## Attempt 1 consequence
 
-**The floor-one Omega is NOT yet sealed on the cloud.** All 27 trained checkpoints are
-preserved as artifacts (30-day retention from 2026-07-15). The seal is one fan-in
-re-run away ("Re-run failed jobs" on run 29415341620, or a fresh dispatch); the fan-in
-performs no duplicate training. The seal gate is
-`PAIS_FLOOR_PASS|cubes=27|cells=21600` plus `sha256sum -c` over the fan-in tree.
+At the end of attempt 1, the floor-one Omega was not yet sealed. All 27 trained
+checkpoints remained available for a fan-in retry without duplicate training.
+
+## Attempt 2 correction and current state
+
+GitHub attempt 2 completed successfully:
+
+- run `29415341620`, attempt `2`, conclusion `success`;
+- head `94718f8f78ea43829e8c6046478ab0369ff21a91`;
+- fan-in job `87451650198`, 31m52s, all steps green;
+- artifact `pais-omega-floor1-sealed`, ID `8355679931`, 78,509,913 bytes;
+- artifact digest `sha256:7d24fdaabc05bf61db7488865311a62ddfdce7683b34da594279b9deeb2c381e`;
+- final gate `PAIS_FLOOR_PASS|cubes=27|cells=21600`.
+
+The floor-one Omega is sealed at the owning GitHub gate. LIRIS has not downloaded and
+replayed the artifact in this receipt, so cross-seat byte replay remains UNVERIFIED.
 
 ## Companion contract
 

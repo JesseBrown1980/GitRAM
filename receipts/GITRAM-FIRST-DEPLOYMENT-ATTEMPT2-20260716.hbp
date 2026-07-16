@@ -1,0 +1,8 @@
+GITRAMATTEMPT2HDR|schema=GITRAM-FIRST-DEPLOYMENT-ATTEMPT2-V1|seat=LIRIS|date=2026-07-16|evidence=MEASURED_GITHUB|json=0
+OWNINGGATE|repo=JesseBrown1980/HYPER-BECHS--the-third-set|pr=42|run=29415341620|attempt=2|workflow=Pais_Omega_floor_one_GitRAM_27x800|head_branch=agent/liris-pais-gitram-floor1-20260715|head_sha=94718f8f78ea43829e8c6046478ab0369ff21a91|status=completed|conclusion=success|json=0
+FANIN|job_id=87451650198|name=Verify_27_checkpoints_and_seal_floor-one_Omega|started=2026-07-15T19:27:18Z|completed=2026-07-15T19:59:10Z|elapsed=31m52s|all_steps=success|json=0
+SEAL|gate=PAIS_FLOOR_PASS|cubes=27|cells=21600|accepted=13339|held=8261|gain_bytes=1063629238|omega=cb8f8e7e0d30fad7079fe1d887f613fcc3154de704a0ab0af7fbdf5a52840d2e|result_sha256=5811cf8194154bea843f2bf473476036ff8e4cdc223de523ae936dc3bade63db|json=0
+ARTIFACT|id=8355679931|name=pais-omega-floor1-sealed|bytes=78509913|digest_sha256=7d24fdaabc05bf61db7488865311a62ddfdce7683b34da594279b9deeb2c381e|expired=0|expires=2026-08-14T19:59:00Z|json=0
+SUPERSEDES_STATE|attempt1_cancelled_history=1|prior_unsealed_current_state=0|current_owning_gate_state=SEALED|json=0
+BOUNDARY|artifact_downloaded_on_liris=0|artifact_byte_replay_on_liris=0|cross_seat_remeasurement=UNVERIFIED|github_gate=MEASURED_GITHUB|json=0
+GITRAMATTEMPT2FTR|rows=8|status=PASS|json=0

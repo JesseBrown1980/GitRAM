@@ -1,3 +1,9 @@
+.gitattributes text eol=lf
 * text=auto eol=lf
-*.hbp -text
-*.sha256 -text
+*.hbp text eol=lf
+*.hbi text eol=lf
+*.sha256 text eol=lf
+SHA256SUMS text eol=lf
+*.md text eol=lf
+*.rs text eol=lf
+*.yml text eol=lf
