@@ -1,0 +1,5 @@
+HBIROW|kind=emitter|seed=be80843b5ce5de04|chain=pid[n]=sha16(pid[n-1]|name)|json=0
+EMIT|family=path3|name=bundle-sealed-459-rows|pid=bd7b615fa845f5bd|json=0
+EMIT|family=path3|name=language-genesis-34-tongues|pid=e87ba1e2f20b8ef8|json=0
+EMIT|family=path3|name=omnisubmit-epoch-root-executed|pid=167e7c98f78273a8|json=0
+EMIT|family=path3|name=path3-level2-sealed|pid=56070dadbd37a125|json=0
