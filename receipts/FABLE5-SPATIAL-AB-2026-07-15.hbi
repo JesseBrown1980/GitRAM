@@ -1,0 +1,6 @@
+HBIROW|kind=emitter|seed=be80843b5ce5de04|chain=pid[n]=sha16(pid[n-1]|name)|json=0
+EMIT|family=spatial|name=twelve-ways-played|pid=8194adf2ba98abb6|json=0
+EMIT|family=spatial|name=pairlaw-i-r-27of27-exact|pid=b5c2df815841b7c7|json=0
+EMIT|family=spatial|name=spatial-ab-27of27-majority|pid=106cc48ccf356378|json=0
+EMIT|family=spatial|name=inverse-pair-two-tier-theorem|pid=ed434d261962b75b|json=0
+EMIT|family=spatial|name=codex-sol56-local-artifacts|pid=b49c7c5a9f09b3c7|json=0
