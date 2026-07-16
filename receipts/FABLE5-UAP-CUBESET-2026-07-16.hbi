@@ -1,0 +1,5 @@
+HBIROW|kind=emitter|seed=be80843b5ce5de04|chain=pid[n]=sha16(pid[n-1]|name)|json=0
+EMIT|family=uap|name=uap-raw-video-pulled|pid=98c1942f22cf0387|json=0
+EMIT|family=uap|name=uap-814-slices|pid=817f991b1976719d|json=0
+EMIT|family=uap|name=uap-cubeset-sealed|pid=1437eeb6e4c41a54|json=0
+EMIT|family=uap|name=uap-tournament-pending|pid=bc5a21bd1b146163|json=0
