@@ -1,0 +1,9 @@
+HBIHDR|schema=GITRAM-FIRST-DEPLOYMENT-ATTEMPT2-HBI-V1|seat=LIRIS|source=GITRAM-FIRST-DEPLOYMENT-ATTEMPT2-20260716.hbp|json=0
+HBIROW|row=1|kind=header|claim=attempt2_measured_github|json=0
+HBIROW|row=2|kind=owning_gate|run=29415341620|attempt=2|conclusion=success|json=0
+HBIROW|row=3|kind=fanin|job_id=87451650198|elapsed=31m52s|json=0
+HBIROW|row=4|kind=seal|cubes=27|cells=21600|status=PASS|json=0
+HBIROW|row=5|kind=artifact|artifact_id=8355679931|bytes=78509913|json=0
+HBIROW|row=6|kind=state_correction|current=SEALED|json=0
+HBIROW|row=7|kind=boundary|liris_byte_replay=UNVERIFIED|json=0
+HBIFTR|rows=9|status=PASS|json=0
