@@ -1,0 +1,204 @@
+# Independent finite S3 row-only cross-check. No r-dependent calculation.
+# Historical v1 source is kept unchanged. Original v1 strict clippy HOLD persists.
+name: GitRAM finite YM m13 cross-environment row-only
+on:
+  push:
+    branches: [gpt6-floor-independent-second-seat-20261110]
+    paths: [.github/workflows/gpt6-floor-m13-crosscheck.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gitram-m13-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  COMMIT: e74d8a46e86034096fd9c9231c87f594f17a93bf
+  ROOT: finite/independent/y131-floor-cert-freeze-20261110
+  KEY_PIN: b67d54ab32d0c33ac8b1cbd783fa6579c0f7423a342c169a58e4b7c8e86bbc94
+
+jobs:
+  exact-r-guard:
+    name: Exact rational exclusion guard tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Test rational policy without evaluating any r-dependent quantity
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import re
+          def accepted(s):
+              m = re.fullmatch(r'([+]?[0-9]+)(?:/([0-9]+))?', s)
+              if m is None:
+                  return False
+              n, d = int(m.group(1)), int(m.group(2) or '1')
+              if d == 0:
+                  return False
+              # Exact cross-multiplication: reject |r-9| <= 1 in ALL spellings.
+              if abs(n - 9*d) <= d:
+                  return False
+              return 2*n == 21*d or n == 12*d or n == 14*d or n >= 20*d
+          refused = ('9/1','18/2','90/10','19/2','8','10','16/2',
+                     '0018/0002','0/0','9/0','9.0','17/2','7','-9')
+          approved = ('21/2','42/4','12','24/2','14','20','21')
+          assert all(not accepted(s) for s in refused)
+          assert all(accepted(s) for s in approved)
+          print('EXACT_RATIONAL_POLICY|PASS|integer_only|boundary_8_to_10_closed|r9_runs=0')
+          PY
+
+  rust-rows:
+    name: Rust writer r-independent m13 rowhash
+    needs: exact-r-guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: JesseBrown1980/Finite-universe-Yang-mills-existence-and-mass-gap-using-HEB-C
+          ref: e74d8a46e86034096fd9c9231c87f594f17a93bf
+          path: finite
+          persist-credentials: false
+      - name: Build source exactly and run only r-independent rowhash
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C finite rev-parse HEAD)" = "$COMMIT"
+          src="$GITHUB_WORKSPACE/$ROOT"
+          out="$GITHUB_WORKSPACE/out/rust"
+          mkdir -p "$out"
+          cd "$src"
+          grep -E '  work/design/(rs/src/main.rs|rs/Cargo.toml|rs/Cargo.lock|peak_rss.py|out/core_keys_m13.bin)$' FREEZE-PIN.sha256 | sha256sum -c - | tee "$out/pins.log"
+          test "$(sha256sum work/design/out/core_keys_m13.bin | cut -d' ' -f1)" = "$KEY_PIN"
+          rustup toolchain install 1.81.0 --profile minimal
+          cd work/design/rs
+          CARGO_TARGET_DIR="$RUNNER_TEMP/r13-target" cargo +1.81.0 build --release --locked -j1
+          binary="$RUNNER_TEMP/r13-target/release/floorcert"
+          sha256sum "$binary" | tee "$out/binary.sha256"
+          # Published v1 rowhash requires the directory to be created externally.
+          # This is r-independent rehearsal, NOT compliance with the historical r9 run protocol.
+          python3 -I -B "$src/work/design/peak_rss.py" "$binary" rowhash --m0 13 --threads 2 --dir "$out" | tee "$out/rowhash.log"
+          python3 - "$out/rowhash.log" "$out/writer.hbp" "$KEY_PIN" <<'PY'
+          import pathlib,re,sys
+          log=pathlib.Path(sys.argv[1]).read_text()
+          matches=re.findall(r'^ROWHASH\|m0=13\|sha256=([0-9a-f]{64})\|classes=(\d+)\|tail_moves=(\d+)\|back_moves=(\d+)\|bytes=(\d+)',log,re.M)
+          assert len(matches)==1
+          row,classes,tail,back,nbytes=matches[0]
+          assert int(classes)==89301 and row.startswith('902be763')
+          keys=re.findall(r'^KEYSHASH\|m0=13\|classes=89301\|sha256=([0-9a-f]{64})',log,re.M)
+          assert len(keys)==1 and keys[0]==sys.argv[3]
+          peaks=[int(v) for v in re.findall(r'^PEAK_RSS\|kB=(\d+)\|exit=0\b',log,re.M)]
+          assert len(peaks)==1 and peaks[0]<2097152
+          pathlib.Path(sys.argv[2]).write_text(
+              'ROWHASH|implementation=rust|m0=13|sha256='+row+'|classes='+classes+
+              '|tail_moves='+tail+'|back_moves='+back+'|bytes='+nbytes+
+              '|keyshash='+keys[0]+'|peak_kB='+str(peaks[0])+'|r9_runs=0\n')
+          print('M13_RUST|PASS|full_rowhash='+row+'|peak_kB='+str(peaks[0]))
+          PY
+      - name: Upload Rust m13 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m13-rust-writer
+          retention-days: 30
+          if-no-files-found: error
+          path: out/rust/
+
+  python-rows:
+    name: Existing Python cert_gate.py rows-only m13
+    needs: exact-r-guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: JesseBrown1980/Finite-universe-Yang-mills-existence-and-mass-gap-using-HEB-C
+          ref: e74d8a46e86034096fd9c9231c87f594f17a93bf
+          path: finite
+          persist-credentials: false
+      - name: Reconstruct all m13 rows in Python from pinned keys
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C finite rev-parse HEAD)" = "$COMMIT"
+          src="$GITHUB_WORKSPACE/$ROOT"
+          out="$GITHUB_WORKSPACE/out/python"
+          mkdir -p "$out"
+          cd "$src"
+          grep -E '  work/design/(py/cert_gate.py|peak_rss.py|out/core_keys_m13.bin)$' FREEZE-PIN.sha256 | sha256sum -c - | tee "$out/pins.log"
+          keys=work/design/out/core_keys_m13.bin
+          test "$(sha256sum "$keys" | cut -d' ' -f1)" = "$KEY_PIN"
+          python3 -I -B work/design/peak_rss.py python3 -I -B work/design/py/cert_gate.py --rows-only "$keys" 13 | tee "$out/rowhash.log"
+          python3 - "$out/rowhash.log" "$out/python.hbp" "$KEY_PIN" <<'PY'
+          import pathlib,re,sys
+          log=pathlib.Path(sys.argv[1]).read_text()
+          matches=re.findall(r'^ROWHASH\|m0=13\|sha256=([0-9a-f]{64})\|classes=(\d+)\|tail_moves=(\d+)\|back_moves=(\d+)\|bytes=(\d+)',log,re.M)
+          assert len(matches)==1
+          row,classes,tail,back,nbytes=matches[0]
+          assert int(classes)==89301 and row.startswith('902be763')
+          keys=re.findall(r'^KEYSHASH\|m0=13\|sha256=([0-9a-f]{64})',log,re.M)
+          assert len(keys)==1 and keys[0]==sys.argv[3]
+          assert 'VERDICT|ROWS_ONLY|m0=13|rowhash='+row+'|keyshash='+keys[0] in log
+          peaks=[int(v) for v in re.findall(r'^PEAK_RSS\|kB=(\d+)\|exit=0\b',log,re.M)]
+          assert len(peaks)==1 and peaks[0]<2097152
+          pathlib.Path(sys.argv[2]).write_text(
+              'ROW_HASH|implementation=python|m0=13|sha256='+row+'|classes='+classes+
+              '|tail_moves='+tail+'|back_moves='+back+'|bytes='+nbytes+
+              '|keyshash='+keys[0]+'|peak_kB='+str(peaks[0])+'|r9_runs=0\n')
+          print('M13_PYTHON|PASS|full_rowhash='+row+'|peak_kB='+str(peaks[0]))
+          PY
+      - name: Upload Python m13 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m13-python-verifier
+          retention-days: 30
+          if-no-files-found: error
+          path: out/python/
+
+  compare:
+    name: Require independent m13 Rust and Python hashes identical
+    needs: [rust-rows, python-rows]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Do not accept incomplete shards
+        shell: bash
+        env:
+          RUST_RESULT: ${{ needs.rust-rows.result }}
+          PYTHON_RESULT: ${{ needs.python-rows.result }}
+        run: |
+          test "$RUST_RESULT" = success && test "$PYTHON_RESULT" = success
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: m13-*
+          path: m13-comparison
+          merge-multiple: true
+      - name: Independently compare complete hash and structure counts
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f m13-comparison/writer.hbp
+          test -f m13-comparison/python.hbp
+          python3 - <<'PY'
+          import pathlib
+          def read(path):
+              s=pathlib.Path(path).read_text().strip()
+              out={}
+              for part in s.split('|')[1:]:
+                  k,_,v=part.partition('=')
+                  out[k]=v
+              return out
+          a=read('m13-comparison/writer.hbp')
+          b=read('m13-comparison/python.hbp')
+          fields=('m0','sha256','classes','tail_moves','back_moves','bytes','keyshash')
+          for field in fields:
+              assert a[field]==b[field], (field,a[field],b[field])
+          assert a['m0']=='13' and a['classes']=='89301' and a['sha256'].startswith('902be763')
+          assert a['keyshash']=='b67d54ab32d0c33ac8b1cbd783fa6579c0f7423a342c169a58e4b7c8e86bbc94'
+          assert a['r9_runs']==b['r9_runs']=='0'
+          print('M13_CROSS_IMPLEMENTATION|PASS|rust_vs_python|sha256='+a['sha256']+'|classes='+a['classes']+'|r9_runs=0')
+          PY
