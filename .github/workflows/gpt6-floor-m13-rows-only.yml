@@ -1,0 +1,106 @@
+# GPT-6 independent environment for r-independent m0=13, no r=9 or near-r=9 calculations.
+# Uses the repository's existing Python cert_gate.py, NOT a newly authored independent algorithm.
+name: GitRAM finite YM m13 independent-environment rows-only
+on:
+  push:
+    branches: [gpt6-floor-m13-rowcheck-20261110]
+    paths: [.github/workflows/gpt6-floor-m13-rows-only.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+concurrency:
+  group: m13-rowcheck-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  rational-exclusion-guard:
+    name: Exact rational guard - refuse all r within one of 9
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Test exact rationals, no float conversion and no r9 invocation
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from math import gcd
+          def allowed(s):
+              a, sep, b = s.partition('/')
+              n = int(a)
+              d = int(b) if sep else 1
+              if d <= 0:
+                  raise ValueError("denominator must be positive")
+              g = gcd(abs(n), d)
+              n //= g
+              d //= g
+              return abs(n - 9*d) > d
+          for s in ('9', '9/1', '18/2', '90/10', '19/2', '10', '20/2', '8', '16/2', '17/2'):
+              assert not allowed(s), f"NEAR_R9_GUARD_BYPASS:{s}"
+              print(f"GUARD|REFUSED|r={s}|r9_executions=0")
+          for s in ('21/2', '12', '14', '20'):
+              assert allowed(s), f"FALSE_REFUSAL:{s}"
+              print(f"GUARD|ALLOWED_CONTROL|r={s}|r9_executions=0")
+          print("EXACT_RATIONAL_GUARD=PASS|r9_executions=0")
+          PY
+
+  independent-rows-m13:
+    name: Python existing cert_gate rows-only m0=13 (89,301 classes)
+    needs: rational-exclusion-guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout unchanged committed v1 at precise SHA
+        uses: actions/checkout@v4
+        with:
+          repository: JesseBrown1980/Finite-universe-Yang-mills-existence-and-mass-gap-using-HEB-C
+          ref: e74d8a46e86034096fd9c9231c87f594f17a93bf
+          path: finite
+          persist-credentials: false
+
+      - name: Hash pins before executing independent row program
+        shell: bash
+        run: |
+          set -euo pipefail
+          export ROOT="$GITHUB_WORKSPACE/finite/independent/y131-floor-cert-freeze-20261110"
+          test "$(git -C finite rev-parse HEAD)" = "e74d8a46e86034096fd9c9231c87f594f17a93bf"
+          mkdir -p "$GITHUB_WORKSPACE/out"
+          cd "$ROOT"
+          grep -E '  work/design/(py/cert_gate.py|peak_rss.py|out/core_keys_m13.bin)$' FREEZE-PIN.sha256 | sha256sum -c - | tee "$GITHUB_WORKSPACE/out/pincheck.log"
+          test "$(sha256sum work/design/out/core_keys_m13.bin | cut -d' ' -f1)" = b67d54ab32d0c33ac8b1cbd783fa6579c0f7423a342c169a58e4b7c8e86bbc94
+
+      - name: Derive entire row hash using verifier on a different cloud machine
+        shell: bash
+        timeout-minutes: 100
+        run: |
+          set -euo pipefail
+          export ROOT="$GITHUB_WORKSPACE/finite/independent/y131-floor-cert-freeze-20261110"
+          cd "$ROOT"
+          python3 -I -B work/design/peak_rss.py python3 -I -B work/design/py/cert_gate.py --rows-only work/design/out/core_keys_m13.bin 13 | tee "$GITHUB_WORKSPACE/out/m13-rows-only.log"
+          grep -Fq 'KEYSHASH|m0=13|sha256=b67d54ab32d0c33ac8b1cbd783fa6579c0f7423a342c169a58e4b7c8e86bbc94' "$GITHUB_WORKSPACE/out/m13-rows-only.log"
+          grep -Eq '^ROWHASH\|m0=13\|sha256=[[:xdigit:]]{64}\|classes=89301\|' "$GITHUB_WORKSPACE/out/m13-rows-only.log"
+          grep -Eq '^VERDICT\|ROWS_ONLY\|m0=13\|rowhash=[[:xdigit:]]{64}\|keyshash=b67d54ab32d0c33ac8b1cbd783fa6579c0f7423a342c169a58e4b7c8e86bbc94' "$GITHUB_WORKSPACE/out/m13-rows-only.log"
+          python3 - "$GITHUB_WORKSPACE/out/m13-rows-only.log" <<'PY'
+          import pathlib, re, sys
+          log = pathlib.Path(sys.argv[1]).read_text()
+          rows = re.findall(r"^ROWHASH\|m0=13\|sha256=([0-9a-f]{64})\|classes=89301\|", log, re.M)
+          verdict = re.findall(r"^VERDICT\|ROWS_ONLY\|m0=13\|rowhash=([0-9a-f]{64})\|keyshash=", log, re.M)
+          peaks = [int(x) for x in re.findall(r"^PEAK_RSS\|kB=(\d+)\|exit=0\b", log, re.M)]
+          assert len(rows) == len(verdict) == len(peaks) == 1
+          assert rows[0] == verdict[0]
+          assert peaks[0] < 2097152, "RESOURCE_LIMIT_EXCEEDED"
+          print("M13_ROW_SHA256="+rows[0])
+          print("M13_SHA_PREFIX_MATCH_EXTERNAL_REPORT="+str(rows[0].startswith("902be763")))
+          print("RESOURCE|PASS|peak_kB="+str(peaks[0])+"|limit_kB=2097152")
+          print("CLASS_HASH=PASS|classes=89301|r9_executions=0")
+          PY
+          sha256sum "$GITHUB_WORKSPACE/out/m13-rows-only.log" | tee "$GITHUB_WORKSPACE/out/m13-rows-only.log.sha256"
+          echo 'SCOPE=EXCLUDED_CONTROL_ONLY|ALGORITHM=EXISTING_CERT_GATE|R9_LAUNCH=DISABLED' | tee "$GITHUB_WORKSPACE/out/SCOPE.hbp"
+
+      - name: Retain the exact check receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m13-existing-python-verifier-second-environment
+          retention-days: 30
+          if-no-files-found: error
+          path: out/
