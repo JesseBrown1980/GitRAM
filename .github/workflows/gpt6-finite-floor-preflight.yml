@@ -1,0 +1,124 @@
+# Independent GitRAM rehearsal of published v1 source. NEVER invokes r=9.
+name: GitRAM finite Yang-Mills floor excluded-r
+on:
+  push:
+    branches: [gpt6-floor-excluded-preflight-20261110]
+    paths: [.github/workflows/gpt6-finite-floor-preflight.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: gitram-floor-preflight-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  core-rehearsal:
+    name: "Excluded r=12 m0=${{ matrix.m0 }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    strategy:
+      fail-fast: false
+      matrix:
+        m0: [4, 11]
+    env:
+      PIN_COMMIT: e74d8a46e86034096fd9c9231c87f594f17a93bf
+      ROOT: finite/independent/y131-floor-cert-freeze-20261110
+    steps:
+      - name: Checkout exact published v1 source
+        uses: actions/checkout@v4
+        with:
+          repository: JesseBrown1980/Finite-universe-Yang-mills-existence-and-mass-gap-using-HEB-C
+          ref: e74d8a46e86034096fd9c9231c87f594f17a93bf
+          path: finite
+          persist-credentials: false
+
+      - name: Rust 1.81 setup
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.81.0 --profile minimal --component clippy
+          rustc +1.81.0 --version
+          cargo +1.81.0 --version
+
+      - name: Source pins and strict clippy diagnostic
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C finite rev-parse HEAD)" = "$PIN_COMMIT"
+          cd "$ROOT"
+          grep -E '  work/design/(rs/src/main.rs|rs/Cargo.toml|rs/Cargo.lock|py/cert_gate.py|peak_rss.py)$' FREEZE-PIN.sha256 | sha256sum -c -
+          cd work/design/rs
+          mkdir -p "$GITHUB_WORKSPACE/out/m${{ matrix.m0 }}"
+          set +e
+          cargo +1.81.0 clippy --all-targets -- -D warnings > "$GITHUB_WORKSPACE/out/m${{ matrix.m0 }}/clippy.log" 2>&1
+          rc=$?
+          set -e
+          echo "CLIPPY_DIAGNOSTIC_EXIT=$rc" | tee "$GITHUB_WORKSPACE/out/m${{ matrix.m0 }}/clippy.status"
+          echo "CLIPPY_EXIT=$rc" >> "$GITHUB_ENV"
+
+      - name: Compile and run genuine excluded-r sparse core
+        shell: bash
+        run: |
+          set -euo pipefail
+          src="$GITHUB_WORKSPACE/$ROOT"
+          out="$GITHUB_WORKSPACE/out/m${{ matrix.m0 }}"
+          cd "$src/work/design/rs"
+          CARGO_TARGET_DIR="$RUNNER_TEMP/floor-target" cargo +1.81.0 build --release --locked -j1
+          binary="$RUNNER_TEMP/floor-target/release/floorcert"
+          sha256sum "$binary" | tee "$out/binary.sha256"
+          # Explicitly excluded coupling r=12. Nothing runs with r=9.
+          python3 -I -B "$src/work/design/peak_rss.py" "$binary" rowhash --m0 "${{ matrix.m0 }}" --threads 2 --dir "$out" | tee "$out/rowhash.log"
+          if [[ "${{ matrix.m0 }}" = 4 ]]; then fspec='1;8,7,6,5,4;6,5,4,3'; else fspec='1'; fi
+          python3 -I -B "$src/work/design/peak_rss.py" "$binary" cert --m0 "${{ matrix.m0 }}" --r 12 --f "$fspec" --write-cert --threads 2 --dir "$out" | tee "$out/cert.log"
+          grep -q '^ROWHASH_ONLY|' "$out/rowhash.log"
+          grep -q '^CERT|r=12/1|' "$out/cert.log"
+          grep -q '|row_check=PASS|' "$out/cert.log"
+          shopt -s nullglob
+          certs=("$out"/cert_m*_r12_1_*.txt)
+          test "${#certs[@]}" -ge 1
+          for cert in "${certs[@]}"; do
+            base="$(basename "$cert")"
+            python3 -I -B "$src/work/design/peak_rss.py" python3 -I -B "$src/work/design/py/cert_gate.py" "$cert" | tee "$out/$base.verify.log"
+            grep -q '^VERDICT|PASS|' "$out/$base.verify.log"
+          done
+          printf 'EXCLUDED_R12|m0=%s|certificates=%s|verdict=PASS|r9_runs=0\n' "${{ matrix.m0 }}" "${#certs[@]}" | tee "$out/summary.hbp"
+          cp "${certs[0]}" "$out/tampered.txt"
+          python3 - "$out/tampered.txt" <<'PY'
+          import pathlib, sys
+          p = pathlib.Path(sys.argv[1])
+          s = p.read_text()
+          assert "rowhash=" in s
+          p.write_text(s.replace("rowhash=", "rowhash=0", 1))
+          PY
+          if python3 -I -B "$src/work/design/py/cert_gate.py" "$out/tampered.txt" > "$out/tampered.verify.log" 2>&1; then
+            echo 'PLANT|FAIL|tampered_certificate_accepted'
+            exit 1
+          fi
+          echo 'PLANT|PASS|tampered_certificate_rejected' | tee "$out/plant.status"
+          python3 - "$out" <<'PY'
+          import pathlib, re, sys
+          out = pathlib.Path(sys.argv[1])
+          peaks = [int(v) for f in out.glob("*.log") for v in re.findall(r"^PEAK_RSS\|kB=(\d+)", f.read_text(errors="replace"), re.M)]
+          assert peaks, "no peak measurements"
+          peak = max(peaks)
+          print(f"PEAK_GATE|highest_kB={peak}|limit_kB=2097152")
+          assert peak < 2097152, "2 GiB gate failed"
+          PY
+
+      - name: Preserve all evidence even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: excluded-r12-m${{ matrix.m0 }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: out/m${{ matrix.m0 }}/
+
+      - name: Strict policy gate; known v1 clippy HOLD cannot be green
+        if: always()
+        shell: bash
+        run: |
+          if [ "${CLIPPY_EXIT:-999}" != 0 ]; then
+            echo "OVERALL=HOLD|reason=v1_source_not_clippy_clean|r9_runs=0"
+            exit 1
+          fi
+          echo "POLICY=PASS|r9_runs=0"
