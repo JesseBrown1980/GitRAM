@@ -1,0 +1,154 @@
+name: GitRAM independent Yang-Mills floor second seat
+on:
+  push:
+    branches: [gpt6-floor-independent-second-seat-20261110]
+    paths: [.github/workflows/gpt6-floor-second-seat.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: floor-independent-${{ github.ref }}
+  cancel-in-progress: false
+env:
+  ROOT: finite/independent/y131-floor-cert-freeze-20261110
+  PIN: e74d8a46e86034096fd9c9231c87f594f17a93bf
+
+jobs:
+  independent-rows:
+    name: Python full independent row rederivation m0=${{ matrix.m0 }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        m0: [11, 12]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: JesseBrown1980/Finite-universe-Yang-mills-existence-and-mass-gap-using-HEB-C
+          ref: e74d8a46e86034096fd9c9231c87f594f17a93bf
+          path: finite
+          persist-credentials: false
+      - name: Check input pins and independently reconstruct row hash
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C finite rev-parse HEAD)" = "$PIN"
+          cd "$ROOT"
+          m0=${{ matrix.m0 }}
+          out="$GITHUB_WORKSPACE/out/m$m0"
+          mkdir -p "$out"
+          grep -E '  work/design/(py/cert_gate.py|peak_rss.py|out/core_keys_m(11|12).bin)$' FREEZE-PIN.sha256 | sha256sum -c - | tee "$out/pins.log"
+          case "$m0" in
+            11) key=e25b8b392161f6f02d933f6a1e78643b3ff95ae3fb69b72b02a36c2c8a5f3a7e; row=8369f4a981a888f4e028b155f3306371c2eacb421bed9bbc444b86e7ef862884; classes=34920 ;;
+            12) key=942c2eed527aa2c327ce2aa5e811c0c64b0c524a46671f4ccb99ee1086ff5479; row=f835b2e1ded4b7f3f38d9d7f3f8437ebfa0a6ede53783f224ebbd1e9b4b7dee7; classes=65025 ;;
+          esac
+          keys="work/design/out/core_keys_m$m0.bin"
+          test "$(sha256sum "$keys" | cut -d' ' -f1)" = "$key"
+          python3 -I -B work/design/peak_rss.py python3 -I -B work/design/py/cert_gate.py --rows-only "$keys" "$m0" | tee "$out/rebuilt.log"
+          grep -Fq "KEYSHASH|m0=$m0|sha256=$key" "$out/rebuilt.log"
+          grep -Fq "ROWHASH|m0=$m0|sha256=$row|classes=$classes" "$out/rebuilt.log"
+          grep -Fq "VERDICT|ROWS_ONLY|m0=$m0|rowhash=$row|keyshash=$key" "$out/rebuilt.log"
+          python3 - "$out/rebuilt.log" <<'PY'
+          import pathlib,re,sys
+          s=pathlib.Path(sys.argv[1]).read_text()
+          a=[int(v) for v in re.findall(r"^PEAK_RSS\|kB=(\d+)\|exit=0\b",s,re.M)]
+          assert len(a)==1 and a[0]<2097152, "missing external peak or 2 GiB exceeded"
+          print("RESOURCE|PASS|peak_kB="+str(a[0]))
+          PY
+          echo "SECOND_SEAT|m0=$m0|r=none|independent_python_rowhash=PASS|r9_runs=0" | tee "$out/summary.hbp"
+      - name: Archive all independent receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: second-seat-rows-m${{ matrix.m0 }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: out/m${{ matrix.m0 }}/
+
+  excluded-control:
+    name: Excluded r=21/2 certificates plus fault controls
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: JesseBrown1980/Finite-universe-Yang-mills-existence-and-mass-gap-using-HEB-C
+          ref: e74d8a46e86034096fd9c9231c87f594f17a93bf
+          path: finite
+          persist-credentials: false
+      - name: Install exact compiler toolchain
+        run: rustup toolchain install 1.81.0 --profile minimal --component clippy
+      - name: Rebuild excluded-control core and verify independently
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C finite rev-parse HEAD)" = "$PIN"
+          src="$GITHUB_WORKSPACE/$ROOT"
+          out="$GITHUB_WORKSPACE/out/control"
+          mkdir -p "$out"
+          cd "$src"
+          grep -E '  work/design/(rs/src/main.rs|rs/Cargo.toml|rs/Cargo.lock|py/cert_gate.py|peak_rss.py)$' FREEZE-PIN.sha256 | sha256sum -c - | tee "$out/pins.log"
+          cd work/design/rs
+          set +e
+          cargo +1.81.0 clippy --all-targets -- -D warnings > "$out/clippy.log" 2>&1
+          rc=$?
+          set -e
+          echo "CLIPPY_EXIT=$rc" | tee "$out/clippy.status"
+          echo "CLIPPY_EXIT=$rc" >> "$GITHUB_ENV"
+          CARGO_TARGET_DIR="$RUNNER_TEMP/ymfloor" cargo +1.81.0 build --release --locked -j1
+          binary="$RUNNER_TEMP/ymfloor/release/floorcert"
+          sha256sum "$binary" | tee "$out/binary.sha256"
+          python3 -I -B "$src/work/design/peak_rss.py" "$binary" rowhash --m0 4 --threads 2 --dir "$out" | tee "$out/rows.log"
+          python3 -I -B "$src/work/design/peak_rss.py" "$binary" cert --m0 4 --r 21/2 --f '1;8,7,6,5,4;6,5,4,3' --write-cert --threads 2 --dir "$out" | tee "$out/certs.log"
+          test "$(grep -c '^CERT|r=21/2|m0=4|' "$out/certs.log")" -eq 3
+          shopt -s nullglob
+          cs=("$out"/cert_m4_r21_2_f*.txt)
+          test "${#cs[@]}" -eq 3
+          for cert in "${cs[@]}"; do
+            base="$(basename "$cert")"
+            python3 -I -B "$src/work/design/peak_rss.py" python3 -I -B "$src/work/design/py/cert_gate.py" "$cert" | tee "$out/$base.verify.log"
+            grep -q '^VERDICT|PASS|lambda_min(QHQ)' "$out/$base.verify.log"
+          done
+          python3 - "${cs[0]}" "$out" <<'PY'
+          import pathlib,re,sys
+          s=pathlib.Path(sys.argv[1]).read_text()
+          o=pathlib.Path(sys.argv[2])
+          assert "rowhash=" in s
+          (o/"bad-rowhash.txt").write_text(s.replace("rowhash=","rowhash=0",1))
+          t,n=re.subn(r"\bcap=(-?\d+)/(\d+)",lambda m:"cap="+str(int(m.group(1))+1)+"/"+m.group(2),s,count=1)
+          assert n==1
+          (o/"bad-tail-cap.txt").write_text(t)
+          PY
+          for plant in "$out/bad-rowhash.txt" "$out/bad-tail-cap.txt"; do
+            base="$(basename "$plant")"
+            if python3 -I -B "$src/work/design/py/cert_gate.py" "$plant" > "$out/$base.verify.log" 2>&1; then
+              echo "PLANT|FAIL|$base|accepted"
+              exit 1
+            fi
+            grep -q '^VERDICT|REFUSE|' "$out/$base.verify.log"
+            echo "PLANT|PASS|$base|rejected" | tee "$out/$base.status"
+          done
+          python3 - "$out" <<'PY'
+          import pathlib,re,sys
+          p=pathlib.Path(sys.argv[1])
+          a=[int(x) for f in p.glob("*.log") for x in re.findall(r"^PEAK_RSS\|kB=(\d+)\|exit=0\b",f.read_text(errors="replace"),re.M)]
+          assert a and max(a)<2097152
+          print("RESOURCE|PASS|peak_kB="+str(max(a)))
+          PY
+          echo 'SECOND_SEAT|r=21/2|m0=4|verified_certificates=3|faults_rejected=2|r9_runs=0' | tee "$out/summary.hbp"
+      - name: Archive independently verified evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: second-seat-control-r21-2
+          retention-days: 30
+          if-no-files-found: warn
+          path: out/control/
+      - name: Enforce historical strict Clippy hold, never falsely green
+        if: always()
+        run: |
+          if [ "${CLIPPY_EXIT:-999}" != 0 ]; then
+            echo 'OVERALL=HOLD|reason=published_v1_clippy|r9_runs=0'
+            exit 1
+          fi
