@@ -7,7 +7,21 @@ The actual Stage A lookup convention is not available yet; its end-to-end
 test is a separate required gate. No coupling value is used.
 """
 import sys
-from engine_key_decoder import decode_key, encode_key, record, magnetic, PERMUTATIONS
+import importlib.util
+from pathlib import Path
+# -I excludes the script directory from sys.path. Load the pinned adjacent file
+# explicitly, rather than disabling isolated interpreter mode.
+_adapter_path = Path(__file__).resolve().with_name("engine_key_decoder.py")
+_spec = importlib.util.spec_from_file_location("_stageb_engine_transport", _adapter_path)
+if _spec is None or _spec.loader is None:
+    raise RuntimeError("cannot locate the frozen engine decoder")
+_adapter = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_adapter)
+decode_key = _adapter.decode_key
+encode_key = _adapter.encode_key
+record = _adapter.record
+magnetic = _adapter.magnetic
+PERMUTATIONS = _adapter.PERMUTATIONS
 
 ALL_LINKS = tuple(("h" if k < 12 else "v",
                    (k if k < 12 else k - 12) // 4,
