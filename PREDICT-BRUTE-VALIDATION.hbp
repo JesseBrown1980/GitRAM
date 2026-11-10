@@ -1,0 +1,6 @@
+BRUTE|lx=2|ly=2|plaquettes=4|orbits_total=1393|match=YES|json=0
+BRUTE|lx=1|ly=2|plaquettes=2|orbits_total=49|match=YES|json=0
+BRUTE|lx=1|ly=3|plaquettes=3|orbits_total=251|match=YES|json=0
+BRUTE|lx=1|ly=4|plaquettes=4|orbits_total=1393|match=YES|json=0
+BRUTE|lx=2|ly=1|plaquettes=2|orbits_total=49|match=YES|json=0
+BRUTE|lx=3|ly=1|plaquettes=3|orbits_total=251|match=YES|json=0
