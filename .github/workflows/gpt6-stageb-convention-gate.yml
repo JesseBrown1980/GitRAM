@@ -1,0 +1,56 @@
+name: GitRAM Stage B known-answer convention gate
+on:
+  push:
+    branches: [gpt6-floor-stageb-decoder-20261110]
+    paths:
+      - stageb/test_conventions.py
+      - stageb/CONVENTION-AND-EVIDENCE-ADDENDUM.md
+      - .github/workflows/gpt6-stageb-convention-gate.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stageb-convention-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  convention-gate:
+    name: Exact S3 transport and synthetic translation known answers
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Record source and contract hashes
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha256sum stageb/engine_key_decoder.py stageb/test_conventions.py stageb/CONVENTION-AND-EVIDENCE-ADDENDUM.md stageb/CONTRACT-STAGE-B.md | tee conventions-manifest.sha256
+          test "$(sha256sum stageb/engine_key_decoder.py | cut -d' ' -f1)" = 2e848691fa773e26f7dab33c1a1c0d07a8037171169248d4ff6d98d5c61b2611
+      - name: Run known answers and external peak RSS gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          /usr/bin/time -v -o convention-memory.txt python3 -I -B stageb/test_conventions.py | tee conventions.log
+          grep -Fq 'KNOWN|one_transposition|M=4|both_plaquettes=021|PASS' conventions.log
+          grep -Fq 'KNOWN|one_3cycle|M=6|positive=120|reversed=201|PASS' conventions.log
+          grep -Fq 'KNOWN|noncommuting_102_then_120|M=7|plaquette23=021|PASS' conventions.log
+          grep -Fq 'FAULT|preimage_read_as_image|oriented_holonomy_detected|PASS' conventions.log
+          grep -Fq 'FAULT|reverse_product|oriented_holonomy_detected|PASS' conventions.log
+          grep -Fq 'CONVENTION_PREFLIGHT|PASS|independent_stage_A_lookup=NOT_YET_TESTED|coupling=none' conventions.log
+          awk -F: '/Maximum resident set size/ {gsub(/ /, "", $2); v=$2; seen=1} END {if(!seen || v>=2097152 || v<=0)exit 1; printf "CONVENTION_RESOURCE|PASS|peak_kB=%d|limit_kB=2097152\n", v}' convention-memory.txt | tee -a conventions.log
+          echo 'CONVENTION_KNOWN_ANSWERS=PASS|REAL_STAGE_A_TRANSLATION=HOLD|STAGE_B=HOLD|R9_EXECUTIONS=0' | tee -a conventions.log
+      - name: Retain exact receipts regardless of outcome
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stageb-convention-gate
+          retention-days: 30
+          if-no-files-found: warn
+          path: |
+            conventions.log
+            conventions-manifest.sha256
+            convention-memory.txt
