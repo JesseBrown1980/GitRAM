@@ -1,0 +1,121 @@
+# Engine-side TRANSPORT only, not Stage A independent mathematics and not r9.
+name: GitRAM Stage B engine-key decoder preflight
+on:
+  push:
+    branches: [gpt6-floor-stageb-decoder-20261110]
+    paths:
+      - stageb/engine_key_decoder.py
+      - stageb/CONTRACT-STAGE-B.md
+      - .github/workflows/gpt6-stageb-decoder-preflight.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: stageb-decoder-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  selftest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Built-in decoder tests, no coupling parameter
+        run: |
+          set -euo pipefail
+          python3 -I -B stageb/engine_key_decoder.py --selftest
+          python3 -I -B stageb/engine_key_decoder.py --one 1
+          sha256sum stageb/engine_key_decoder.py stageb/CONTRACT-STAGE-B.md
+
+  decode:
+    needs: selftest
+    name: Engine transport m0=${{ matrix.m0 }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        m0: [11, 12, 13]
+    steps:
+      - name: Checkout GPT-6 adapter and immutable published engine keys
+        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: JesseBrown1980/Finite-universe-Yang-mills-existence-and-mass-gap-using-HEB-C
+          ref: e74d8a46e86034096fd9c9231c87f594f17a93bf
+          path: finite
+          persist-credentials: false
+
+      - name: Decode every engine key into 24 explicit permutations and enforce pins
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C finite rev-parse HEAD)" = e74d8a46e86034096fd9c9231c87f594f17a93bf
+          m0=${{ matrix.m0 }}
+          case "$m0" in
+            11) pin=e25b8b392161f6f02d933f6a1e78643b3ff95ae3fb69b72b02a36c2c8a5f3a7e; classes=34920 ;;
+            12) pin=942c2eed527aa2c327ce2aa5e811c0c64b0c524a46671f4ccb99ee1086ff5479; classes=65025 ;;
+            13) pin=b67d54ab32d0c33ac8b1cbd783fa6579c0f7423a342c169a58e4b7c8e86bbc94; classes=89301 ;;
+          esac
+          keys="$GITHUB_WORKSPACE/finite/independent/y131-floor-cert-freeze-20261110/work/design/out/core_keys_m$m0.bin"
+          test "$(sha256sum "$keys" | cut -d' ' -f1)" = "$pin"
+          mkdir -p "$GITHUB_WORKSPACE/out"
+          python3 -I -B finite/independent/y131-floor-cert-freeze-20261110/work/design/peak_rss.py \
+             python3 -I -B stageb/engine_key_decoder.py \
+             --keys-file "$keys" --pin-sha256 "$pin" --m0 "$m0" \
+             --output "$GITHUB_WORKSPACE/out/transport.hbp" | tee "$GITHUB_WORKSPACE/out/check.log"
+          grep -Fq "ENGINE_DECODER|PASS|m0=$m0|classes=$classes|keys_sha256=$pin" "$GITHUB_WORKSPACE/out/check.log"
+          test "$(grep -c '^E|key=' "$GITHUB_WORKSPACE/out/transport.hbp")" -eq "$classes"
+          python3 - "$GITHUB_WORKSPACE/out/check.log" <<'PY'
+          import pathlib,re,sys
+          s=pathlib.Path(sys.argv[1]).read_text()
+          a=[int(t) for t in re.findall(r"^PEAK_RSS\|kB=(\d+)\|exit=0\b",s,re.M)]
+          assert len(a)==1 and a[0]<2097152, "RESOURCE_LIMIT_EXCEEDED"
+          print("ENGINE_DECODER_RESOURCE|PASS|peak_kB="+str(a[0]))
+          PY
+          sha256sum stageb/engine_key_decoder.py "$GITHUB_WORKSPACE/out/transport.hbp" | tee "$GITHUB_WORKSPACE/out/manifest.sha256"
+          echo "STAGE_B_DATA_TRANSPORT=PASS|m0=$m0|r9_executions=0|stage_a_results_used=0" | tee "$GITHUB_WORKSPACE/out/scope.hbp"
+
+      - name: Negative controls (truncation, duplicate, out-of-range, wrong pin)
+        shell: bash
+        run: |
+          set -euo pipefail
+          m0=${{ matrix.m0 }}
+          case "$m0" in
+            11) pin=e25b8b392161f6f02d933f6a1e78643b3ff95ae3fb69b72b02a36c2c8a5f3a7e ;;
+            12) pin=942c2eed527aa2c327ce2aa5e811c0c64b0c524a46671f4ccb99ee1086ff5479 ;;
+            13) pin=b67d54ab32d0c33ac8b1cbd783fa6579c0f7423a342c169a58e4b7c8e86bbc94 ;;
+          esac
+          python3 - "$GITHUB_WORKSPACE/out" <<'PY'
+          import pathlib,sys
+          root=pathlib.Path(sys.argv[1])
+          (root/"bad-trunc.bin").write_bytes(b"\x01\x00\x00")
+          (root/"bad-duplicate.bin").write_bytes((1).to_bytes(8,"little")*2)
+          (root/"bad-overflow.bin").write_bytes((6**13).to_bytes(8,"little"))
+          PY
+          for file in bad-trunc.bin bad-duplicate.bin bad-overflow.bin; do
+            testfile="$GITHUB_WORKSPACE/out/$file"
+            # This passes a correct content SHA, so the decoder cannot rely only on its pin check.
+            testsha="$(sha256sum "$testfile" | cut -d' ' -f1)"
+            if python3 -I -B stageb/engine_key_decoder.py --keys-file "$testfile" --pin-sha256 "$testsha" --m0 "$m0" --output "$GITHUB_WORKSPACE/out/reject.hbp" > "$GITHUB_WORKSPACE/out/$file.check.log" 2>&1; then
+              echo "PLANT|FAIL|$file|unexpected_acceptance"
+              exit 1
+            fi
+            grep -q '^ENGINE_DECODER|FAIL|' "$GITHUB_WORKSPACE/out/$file.check.log"
+            echo "PLANT|PASS|$file|rejected"
+          done
+          keys="$GITHUB_WORKSPACE/finite/independent/y131-floor-cert-freeze-20261110/work/design/out/core_keys_m$m0.bin"
+          if python3 -I -B stageb/engine_key_decoder.py --keys-file "$keys" --pin-sha256 "$(printf '%064d' 0)" --m0 "$m0" --output "$GITHUB_WORKSPACE/out/reject.hbp" > "$GITHUB_WORKSPACE/out/bad-sha.log" 2>&1; then
+            echo 'PLANT|FAIL|bad-sha|unexpected_acceptance'
+            exit 1
+          fi
+          grep -q '^ENGINE_DECODER|FAIL|reason=KEY_SHA256_MISMATCH' "$GITHUB_WORKSPACE/out/bad-sha.log"
+          echo 'PLANT|PASS|bad-sha|rejected'
+      - name: Archive engine-only transport and control receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stageb-engine-transport-m${{ matrix.m0 }}
+          if-no-files-found: warn
+          retention-days: 30
+          path: out/
