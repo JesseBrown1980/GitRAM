@@ -1,0 +1,154 @@
+name: GitRAM Stage B exact mapped every-row and tail comparison
+on:
+  push:
+    branches: [gpt6-stageb-full-20261110]
+    paths: [.github/workflows/gpt6-stageb-all-rows.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: stageb-everyrow-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  compare:
+    name: "Entire 3x4 S3 mathematical rows m0=${{ matrix.m0 }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix: {m0: [11,12,13]}
+    steps:
+      - name: Checkout audited GPT-6 comparison adapter
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Checkout original independently authored Stage A source EXACT commit
+        uses: actions/checkout@v4
+        with:
+          repository: JesseBrown1980/GitRAM
+          ref: bed7fc80e5d21d4e4f388764507f818633c377ac
+          path: clean
+          persist-credentials: false
+      - name: Checkout original engine definition and verifier EXACT commit
+        uses: actions/checkout@v4
+        with:
+          repository: JesseBrown1980/Finite-universe-Yang-mills-existence-and-mass-gap-using-HEB-C
+          ref: e74d8a46e86034096fd9c9231c87f594f17a93bf
+          path: finite
+          persist-credentials: false
+      - name: Enforce input commitments and strictly pinned original engine verifier
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C clean rev-parse HEAD)" = bed7fc80e5d21d4e4f388764507f818633c377ac
+          test "$(git -C finite rev-parse HEAD)" = e74d8a46e86034096fd9c9231c87f594f17a93bf
+          cd finite/independent/y131-floor-cert-freeze-20261110
+          grep -E '  work/design/(py/cert_gate.py|peak_rss.py|out/core_keys_m(11|12|13).bin)$' FREEZE-PIN.sha256 | sha256sum -c -
+          cd "$GITHUB_WORKSPACE"
+          rustup toolchain install 1.81.0 --profile minimal --component clippy
+          mkdir -p out generated
+          sha256sum stageb/compare_every_row.py stageb/patch_engine_export.py stageb/stagea_bulk_label.rs | tee out/adapter-source.sha256
+      - name: Compile Stage A unchanged and its exact, imported, standalone lattice labeler
+        shell: bash
+        run: |
+          set -euo pipefail
+          (cd clean && cargo +1.81.0 clippy --all-targets --locked -- -D warnings)
+          (cd clean && cargo +1.81.0 build --release --locked -j2)
+          rustc +1.81.0 --edition=2021 -O -A dead_code stageb/stagea_bulk_label.rs -o bulk
+          sha256sum clean/target/release/cleanrows bulk | tee out/binaries.sha256
+      - name: Produce exact engine key translation and Stage A independently labeled bijection
+        shell: bash
+        run: |
+          set -euo pipefail
+          m0=${{ matrix.m0 }}
+          case "$m0" in
+            11) key=e25b8b392161f6f02d933f6a1e78643b3ff95ae3fb69b72b02a36c2c8a5f3a7e ;;
+            12) key=942c2eed527aa2c327ce2aa5e811c0c64b0c524a46671f4ccb99ee1086ff5479 ;;
+            13) key=b67d54ab32d0c33ac8b1cbd783fa6579c0f7423a342c169a58e4b7c8e86bbc94 ;;
+          esac
+          f="finite/independent/y131-floor-cert-freeze-20261110/work/design/out/core_keys_m$m0.bin"
+          test "$(sha256sum "$f" | cut -d' ' -f1)" = "$key"
+          ulimit -v 2000000
+          /usr/bin/time -v -o out/decoder-memory.txt python3 -I -B stageb/engine_key_decoder.py \
+            --keys-file "$f" --m0 "$m0" --pin-sha256 "$key" --output out/engine-transport.hbp | tee out/decoder.log
+          /usr/bin/time -v -o out/bulk-memory.txt ./bulk < out/engine-transport.hbp > out/mapping.hbp
+          sha256sum out/mapping.hbp | tee out/mapping.sha256
+      - name: Build independent Stage A complete rows from immutable source
+        shell: bash
+        run: |
+          set -euo pipefail
+          m0=${{ matrix.m0 }}
+          case "$m0" in
+            11) rowsha=38bc112e3456512334a582de791823c9d8816603c65f2c0f7909966d385c7958 ;;
+            12) rowsha=e0c67604816e6cbeb03f6d84a02a02a8b0950beff690c71f4b8ecdf29c6349ca ;;
+            13) rowsha=c9571982b4ac48daa04aa85d0a56756deecabaf58069fb53222fd257a5b68fe7 ;;
+          esac
+          ulimit -v 2000000
+          /usr/bin/time -v -o out/source-memory.txt clean/target/release/cleanrows \
+            run "$m0" generated clean/PREDICT-STAGE-A.hbp --threads 4 --rep sample > out/stageA-source.log
+          test "$(sha256sum "generated/rows-m$m0.hbp" | cut -d' ' -f1)" = "$rowsha"
+          grep -Fq "ROWS|file=rows-m$m0.hbp|sha256=$rowsha" out/stageA-source.log
+          grep -Fq "RUN|m0=$m0|mutation=0|all_checks=PASS" out/stageA-source.log
+          gzip -n -1 -c "generated/rows-m$m0.hbp" > out/stageA-valid-rows.hbp.gz
+          gzip -t out/stageA-valid-rows.hbp.gz
+          echo "STAGE_A_FRESH_SOURCE|PASS|m0=$m0|row_sha256=$rowsha|historical_git_gzip=HOLD" | tee out/stageA-source.status
+      - name: Reconstruct engine row stream with minimal audited output-only patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          m0=${{ matrix.m0 }}
+          case "$m0" in
+            11) rowsha=8369f4a981a888f4e028b155f3306371c2eacb421bed9bbc444b86e7ef862884 ;;
+            12) rowsha=f835b2e1ded4b7f3f38d9d7f3f8437ebfa0a6ede53783f224ebbd1e9b4b7dee7 ;;
+            13) rowsha=902be763e0019b52bd393bffad6abff0d3cd8a9f4ddf8a6f93e8dd283a56654c ;;
+          esac
+          original="finite/independent/y131-floor-cert-freeze-20261110/work/design/py/cert_gate.py"
+          keys="finite/independent/y131-floor-cert-freeze-20261110/work/design/out/core_keys_m$m0.bin"
+          python3 -I -B stageb/patch_engine_export.py "$original" out/engine-export.py | tee out/instrument.log
+          export STAGEB_EXPORT_PATH="$GITHUB_WORKSPACE/out/engine-rows.hbp.gz"
+          export STAGEB_METADATA_PATH="$GITHUB_WORKSPACE/out/engine-metadata.hbp"
+          ulimit -v 2000000
+          /usr/bin/time -v -o out/engine-memory.txt python3 -I -B out/engine-export.py --rows-only "$keys" "$m0" | tee out/engine-rowhash.log
+          grep -Fq "ROWHASH|m0=$m0|sha256=$rowsha" out/engine-rowhash.log
+          grep -Fq "VERDICT|ROWS_ONLY|m0=$m0|rowhash=$rowsha" out/engine-rowhash.log
+          gzip -t out/engine-rows.hbp.gz
+          gzip -dc out/engine-rows.hbp.gz | sha256sum | awk -v hash="$rowsha" '{if($1!=hash)exit 1; print "ENGINE_STREAM_HASH=PASS|sha256="$1}'
+          sha256sum out/engine-metadata.hbp out/engine-rows.hbp.gz | tee out/engine-transport.sha256
+      - name: Require every class mapped and every entire row equal
+        shell: bash
+        run: |
+          set -euo pipefail
+          m0=${{ matrix.m0 }}
+          case "$m0" in
+            11) stage=38bc112e3456512334a582de791823c9d8816603c65f2c0f7909966d385c7958; engine=8369f4a981a888f4e028b155f3306371c2eacb421bed9bbc444b86e7ef862884 ;;
+            12) stage=e0c67604816e6cbeb03f6d84a02a02a8b0950beff690c71f4b8ecdf29c6349ca; engine=f835b2e1ded4b7f3f38d9d7f3f8437ebfa0a6ede53783f224ebbd1e9b4b7dee7 ;;
+            13) stage=c9571982b4ac48daa04aa85d0a56756deecabaf58069fb53222fd257a5b68fe7; engine=902be763e0019b52bd393bffad6abff0d3cd8a9f4ddf8a6f93e8dd283a56654c ;;
+          esac
+          ulimit -v 2000000
+          /usr/bin/time -v -o out/comparison-memory.txt python3 -I -B stageb/compare_every_row.py \
+            --m0 "$m0" --stagea "generated/rows-m$m0.hbp" --stagea-sha256 "$stage" \
+            --mapping out/mapping.hbp --meta out/engine-metadata.hbp \
+            --engine out/engine-rows.hbp.gz --engine-sha256 "$engine" | tee out/stageB-verdict.hbp
+          grep -Fq "STAGE_B|PASS|m0=$m0|" out/stageB-verdict.hbp
+          python3 - <<'PY' | tee out/memory-gates.hbp
+          import pathlib,re
+          for k in ('decoder','bulk','source','engine','comparison'):
+              text=pathlib.Path('out/'+k+'-memory.txt').read_text()
+              vals=re.findall(r'Maximum resident set size \(kbytes\):\s*(\d+)',text)
+              assert len(vals)==1, 'missing peak '+k
+              rss=int(vals[0])
+              assert 0<rss<2097152,'RESOURCE_LIMIT_EXCEEDED|'+k+'|'+str(rss)
+              print('PROCESS|'+k+'|RSS_KIB='+str(rss)+'|LIMIT_KIB=2097152|PASS')
+          print('STAGE_B_RESOURCES=PASS|r9_executions=0')
+          PY
+      - name: Preserve source, code, failing witnesses and receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stageb-exhaustive-m${{ matrix.m0 }}
+          retention-days: 30
+          compression-level: 1
+          if-no-files-found: warn
+          path: |
+            out/
