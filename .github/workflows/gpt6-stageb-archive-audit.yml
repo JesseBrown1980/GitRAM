@@ -1,0 +1,49 @@
+name: GitRAM Stage B audit published clean-room gzip archive integrity
+on:
+  push:
+    branches: [gpt6-stageb-full-20261110]
+    paths: [.github/workflows/gpt6-stageb-archive-audit.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: JesseBrown1980/GitRAM
+          ref: bed7fc80e5d21d4e4f388764507f818633c377ac
+          path: clean
+          persist-credentials: false
+      - name: Audit immutable historical archive blobs and forced Git text attribute
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          cat clean/.gitattributes | tee out/gitattributes.txt
+          for m0 in 11 12 13; do
+            file="clean/results/main/rows-m$m0.hbp.gz"
+            git -C clean check-attr -a "results/main/rows-m$m0.hbp.gz" | tee -a out/attrs.txt
+            sha256sum "$file" | tee -a out/gzip-sha256.txt
+            if gzip -t "$file" > "out/m$m0.gzip-check.txt" 2>&1; then
+              echo "ARCHIVE|m0=$m0|gzip_crc=PASS" | tee -a out/status.hbp
+            else
+              echo "ARCHIVE|m0=$m0|gzip_crc=FAIL|historical_stageA_result_commit=UNCHANGED" | tee -a out/status.hbp
+            fi
+            head -c 16 "$file" | od -An -tx1 | tee -a out/firstbytes.txt
+            sed "s/^/m$m0|/" "out/m$m0.gzip-check.txt" | tee -a out/gzip-errors.txt
+          done
+          if ! grep -q 'gzip_crc=FAIL' out/status.hbp; then
+            echo 'ARCHIVE_PROBLEM_NOT_REPRODUCED|HOLD'
+            exit 1
+          fi
+          echo 'ARCHIVE_AUDIT=COMPLETE|historical_blobs_not_modified|r9_executions=0'
+      - name: Preserve original archive defect evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stagea-historical-archive-audit
+          retention-days: 30
+          path: out/
