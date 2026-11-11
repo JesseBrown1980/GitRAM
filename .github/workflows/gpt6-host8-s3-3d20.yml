@@ -1,0 +1,566 @@
+name: GitRAM Host8 300GB synthetic plane and 3D S3 20-worker experiment
+on:
+  push:
+    branches: [gpt6-host8-s3-3d20-20261111]
+    paths:
+      - '.github/workflows/gpt6-host8-s3-3d20.yml'
+      - 'experiments/host8-s3-3d20/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: gitram-host8-3d20-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  shard00:
+    name: Native Host8 slice shard 00 / 19
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    outputs:
+      record: ${{ steps.native.outputs.record }}
+    steps:
+      - name: Native Rust 1.81, Clippy, 3D S3, 8-byte Host8 rooms
+        id: native
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.81.0 --profile minimal --component clippy
+          git clone -q --depth 1 --filter=blob:none --no-checkout --single-branch --branch "gpt6-host8-s3-3d20-20261111" https://github.com/JesseBrown1980/GitRAM.git work
+          git -C work sparse-checkout set experiments/host8-s3-3d20
+          git -C work checkout -q "$GITHUB_SHA"
+          test "$(git -C work rev-parse HEAD)" = "$GITHUB_SHA"
+          cargo +1.81.0 clippy --manifest-path work/experiments/host8-s3-3d20/Cargo.toml --all-targets -- -D warnings
+          cargo +1.81.0 test --manifest-path work/experiments/host8-s3-3d20/Cargo.toml
+          cargo +1.81.0 build --release --manifest-path work/experiments/host8-s3-3d20/Cargo.toml
+          record="$(work/experiments/host8-s3-3d20/target/release/host8-s3-3d20 shard 0)"
+          printf '%s\n' "$record" | grep -Fq 'HOST8_SHARD|id=0|'
+          printf '%s\n' "$record"
+          printf 'record=%s\n' "$record" >> "$GITHUB_OUTPUT"
+
+  shard01:
+    name: Native Host8 slice shard 01 / 19
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    outputs:
+      record: ${{ steps.native.outputs.record }}
+    steps:
+      - name: Native Rust 1.81, Clippy, 3D S3, 8-byte Host8 rooms
+        id: native
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.81.0 --profile minimal --component clippy
+          git clone -q --depth 1 --filter=blob:none --no-checkout --single-branch --branch "gpt6-host8-s3-3d20-20261111" https://github.com/JesseBrown1980/GitRAM.git work
+          git -C work sparse-checkout set experiments/host8-s3-3d20
+          git -C work checkout -q "$GITHUB_SHA"
+          test "$(git -C work rev-parse HEAD)" = "$GITHUB_SHA"
+          cargo +1.81.0 clippy --manifest-path work/experiments/host8-s3-3d20/Cargo.toml --all-targets -- -D warnings
+          cargo +1.81.0 test --manifest-path work/experiments/host8-s3-3d20/Cargo.toml
+          cargo +1.81.0 build --release --manifest-path work/experiments/host8-s3-3d20/Cargo.toml
+          record="$(work/experiments/host8-s3-3d20/target/release/host8-s3-3d20 shard 1)"
+          printf '%s\n' "$record" | grep -Fq 'HOST8_SHARD|id=1|'
+          printf '%s\n' "$record"
+          printf 'record=%s\n' "$record" >> "$GITHUB_OUTPUT"
+
+  shard02:
+    name: Native Host8 slice shard 02 / 19
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    outputs:
+      record: ${{ steps.native.outputs.record }}
+    steps:
+      - name: Native Rust 1.81, Clippy, 3D S3, 8-byte Host8 rooms
+        id: native
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.81.0 --profile minimal --component clippy
+          git clone -q --depth 1 --filter=blob:none --no-checkout --single-branch --branch "gpt6-host8-s3-3d20-20261111" https://github.com/JesseBrown1980/GitRAM.git work
+          git -C work sparse-checkout set experiments/host8-s3-3d20
+          git -C work checkout -q "$GITHUB_SHA"
+          test "$(git -C work rev-parse HEAD)" = "$GITHUB_SHA"
+          cargo +1.81.0 clippy --manifest-path work/experiments/host8-s3-3d20/Cargo.toml --all-targets -- -D warnings
+          cargo +1.81.0 test --manifest-path work/experiments/host8-s3-3d20/Cargo.toml
+          cargo +1.81.0 build --release --manifest-path work/experiments/host8-s3-3d20/Cargo.toml
+          record="$(work/experiments/host8-s3-3d20/target/release/host8-s3-3d20 shard 2)"
+          printf '%s\n' "$record" | grep -Fq 'HOST8_SHARD|id=2|'
+          printf '%s\n' "$record"
+          printf 'record=%s\n' "$record" >> "$GITHUB_OUTPUT"
+
+  shard03:
+    name: Native Host8 slice shard 03 / 19
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    outputs:
+      record: ${{ steps.native.outputs.record }}
+    steps:
+      - name: Native Rust 1.81, Clippy, 3D S3, 8-byte Host8 rooms
+        id: native
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.81.0 --profile minimal --component clippy
+          git clone -q --depth 1 --filter=blob:none --no-checkout --single-branch --branch "gpt6-host8-s3-3d20-20261111" https://github.com/JesseBrown1980/GitRAM.git work
+          git -C work sparse-checkout set experiments/host8-s3-3d20
+          git -C work checkout -q "$GITHUB_SHA"
+          test "$(git -C work rev-parse HEAD)" = "$GITHUB_SHA"
+          cargo +1.81.0 clippy --manifest-path work/experiments/host8-s3-3d20/Cargo.toml --all-targets -- -D warnings
+          cargo +1.81.0 test --manifest-path work/experiments/host8-s3-3d20/Cargo.toml
+          cargo +1.81.0 build --release --manifest-path work/experiments/host8-s3-3d20/Cargo.toml
+          record="$(work/experiments/host8-s3-3d20/target/release/host8-s3-3d20 shard 3)"
+          printf '%s\n' "$record" | grep -Fq 'HOST8_SHARD|id=3|'
+          printf '%s\n' "$record"
+          printf 'record=%s\n' "$record" >> "$GITHUB_OUTPUT"
+
+  shard04:
+    name: Native Host8 slice shard 04 / 19
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    outputs:
+      record: ${{ steps.native.outputs.record }}
+    steps:
+      - name: Native Rust 1.81, Clippy, 3D S3, 8-byte Host8 rooms
+        id: native
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.81.0 --profile minimal --component clippy
+          git clone -q --depth 1 --filter=blob:none --no-checkout --single-branch --branch "gpt6-host8-s3-3d20-20261111" https://github.com/JesseBrown1980/GitRAM.git work
+          git -C work sparse-checkout set experiments/host8-s3-3d20
+          git -C work checkout -q "$GITHUB_SHA"
+          test "$(git -C work rev-parse HEAD)" = "$GITHUB_SHA"
+          cargo +1.81.0 clippy --manifest-path work/experiments/host8-s3-3d20/Cargo.toml --all-targets -- -D warnings
+          cargo +1.81.0 test --manifest-path work/experiments/host8-s3-3d20/Cargo.toml
+          cargo +1.81.0 build --release --manifest-path work/experiments/host8-s3-3d20/Cargo.toml
+          record="$(work/experiments/host8-s3-3d20/target/release/host8-s3-3d20 shard 4)"
+          printf '%s\n' "$record" | grep -Fq 'HOST8_SHARD|id=4|'
+          printf '%s\n' "$record"
+          printf 'record=%s\n' "$record" >> "$GITHUB_OUTPUT"
+
+  shard05:
+    name: Native Host8 slice shard 05 / 19
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    outputs:
+      record: ${{ steps.native.outputs.record }}
+    steps:
+      - name: Native Rust 1.81, Clippy, 3D S3, 8-byte Host8 rooms
+        id: native
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.81.0 --profile minimal --component clippy
+          git clone -q --depth 1 --filter=blob:none --no-checkout --single-branch --branch "gpt6-host8-s3-3d20-20261111" https://github.com/JesseBrown1980/GitRAM.git work
+          git -C work sparse-checkout set experiments/host8-s3-3d20
+          git -C work checkout -q "$GITHUB_SHA"
+          test "$(git -C work rev-parse HEAD)" = "$GITHUB_SHA"
+          cargo +1.81.0 clippy --manifest-path work/experiments/host8-s3-3d20/Cargo.toml --all-targets -- -D warnings
+          cargo +1.81.0 test --manifest-path work/experiments/host8-s3-3d20/Cargo.toml
+          cargo +1.81.0 build --release --manifest-path work/experiments/host8-s3-3d20/Cargo.toml
+          record="$(work/experiments/host8-s3-3d20/target/release/host8-s3-3d20 shard 5)"
+          printf '%s\n' "$record" | grep -Fq 'HOST8_SHARD|id=5|'
+          printf '%s\n' "$record"
+          printf 'record=%s\n' "$record" >> "$GITHUB_OUTPUT"
+
+  shard06:
+    name: Native Host8 slice shard 06 / 19
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    outputs:
+      record: ${{ steps.native.outputs.record }}
+    steps:
+      - name: Native Rust 1.81, Clippy, 3D S3, 8-byte Host8 rooms
+        id: native
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.81.0 --profile minimal --component clippy
+          git clone -q --depth 1 --filter=blob:none --no-checkout --single-branch --branch "gpt6-host8-s3-3d20-20261111" https://github.com/JesseBrown1980/GitRAM.git work
+          git -C work sparse-checkout set experiments/host8-s3-3d20
+          git -C work checkout -q "$GITHUB_SHA"
+          test "$(git -C work rev-parse HEAD)" = "$GITHUB_SHA"
+          cargo +1.81.0 clippy --manifest-path work/experiments/host8-s3-3d20/Cargo.toml --all-targets -- -D warnings
+          cargo +1.81.0 test --manifest-path work/experiments/host8-s3-3d20/Cargo.toml
+          cargo +1.81.0 build --release --manifest-path work/experiments/host8-s3-3d20/Cargo.toml
+          record="$(work/experiments/host8-s3-3d20/target/release/host8-s3-3d20 shard 6)"
+          printf '%s\n' "$record" | grep -Fq 'HOST8_SHARD|id=6|'
+          printf '%s\n' "$record"
+          printf 'record=%s\n' "$record" >> "$GITHUB_OUTPUT"
+
+  shard07:
+    name: Native Host8 slice shard 07 / 19
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    outputs:
+      record: ${{ steps.native.outputs.record }}
+    steps:
+      - name: Native Rust 1.81, Clippy, 3D S3, 8-byte Host8 rooms
+        id: native
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.81.0 --profile minimal --component clippy
+          git clone -q --depth 1 --filter=blob:none --no-checkout --single-branch --branch "gpt6-host8-s3-3d20-20261111" https://github.com/JesseBrown1980/GitRAM.git work
+          git -C work sparse-checkout set experiments/host8-s3-3d20
+          git -C work checkout -q "$GITHUB_SHA"
+          test "$(git -C work rev-parse HEAD)" = "$GITHUB_SHA"
+          cargo +1.81.0 clippy --manifest-path work/experiments/host8-s3-3d20/Cargo.toml --all-targets -- -D warnings
+          cargo +1.81.0 test --manifest-path work/experiments/host8-s3-3d20/Cargo.toml
+          cargo +1.81.0 build --release --manifest-path work/experiments/host8-s3-3d20/Cargo.toml
+          record="$(work/experiments/host8-s3-3d20/target/release/host8-s3-3d20 shard 7)"
+          printf '%s\n' "$record" | grep -Fq 'HOST8_SHARD|id=7|'
+          printf '%s\n' "$record"
+          printf 'record=%s\n' "$record" >> "$GITHUB_OUTPUT"
+
+  shard08:
+    name: Native Host8 slice shard 08 / 19
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    outputs:
+      record: ${{ steps.native.outputs.record }}
+    steps:
+      - name: Native Rust 1.81, Clippy, 3D S3, 8-byte Host8 rooms
+        id: native
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.81.0 --profile minimal --component clippy
+          git clone -q --depth 1 --filter=blob:none --no-checkout --single-branch --branch "gpt6-host8-s3-3d20-20261111" https://github.com/JesseBrown1980/GitRAM.git work
+          git -C work sparse-checkout set experiments/host8-s3-3d20
+          git -C work checkout -q "$GITHUB_SHA"
+          test "$(git -C work rev-parse HEAD)" = "$GITHUB_SHA"
+          cargo +1.81.0 clippy --manifest-path work/experiments/host8-s3-3d20/Cargo.toml --all-targets -- -D warnings
+          cargo +1.81.0 test --manifest-path work/experiments/host8-s3-3d20/Cargo.toml
+          cargo +1.81.0 build --release --manifest-path work/experiments/host8-s3-3d20/Cargo.toml
+          record="$(work/experiments/host8-s3-3d20/target/release/host8-s3-3d20 shard 8)"
+          printf '%s\n' "$record" | grep -Fq 'HOST8_SHARD|id=8|'
+          printf '%s\n' "$record"
+          printf 'record=%s\n' "$record" >> "$GITHUB_OUTPUT"
+
+  shard09:
+    name: Native Host8 slice shard 09 / 19
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    outputs:
+      record: ${{ steps.native.outputs.record }}
+    steps:
+      - name: Native Rust 1.81, Clippy, 3D S3, 8-byte Host8 rooms
+        id: native
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.81.0 --profile minimal --component clippy
+          git clone -q --depth 1 --filter=blob:none --no-checkout --single-branch --branch "gpt6-host8-s3-3d20-20261111" https://github.com/JesseBrown1980/GitRAM.git work
+          git -C work sparse-checkout set experiments/host8-s3-3d20
+          git -C work checkout -q "$GITHUB_SHA"
+          test "$(git -C work rev-parse HEAD)" = "$GITHUB_SHA"
+          cargo +1.81.0 clippy --manifest-path work/experiments/host8-s3-3d20/Cargo.toml --all-targets -- -D warnings
+          cargo +1.81.0 test --manifest-path work/experiments/host8-s3-3d20/Cargo.toml
+          cargo +1.81.0 build --release --manifest-path work/experiments/host8-s3-3d20/Cargo.toml
+          record="$(work/experiments/host8-s3-3d20/target/release/host8-s3-3d20 shard 9)"
+          printf '%s\n' "$record" | grep -Fq 'HOST8_SHARD|id=9|'
+          printf '%s\n' "$record"
+          printf 'record=%s\n' "$record" >> "$GITHUB_OUTPUT"
+
+  shard10:
+    name: Native Host8 slice shard 10 / 19
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    outputs:
+      record: ${{ steps.native.outputs.record }}
+    steps:
+      - name: Native Rust 1.81, Clippy, 3D S3, 8-byte Host8 rooms
+        id: native
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.81.0 --profile minimal --component clippy
+          git clone -q --depth 1 --filter=blob:none --no-checkout --single-branch --branch "gpt6-host8-s3-3d20-20261111" https://github.com/JesseBrown1980/GitRAM.git work
+          git -C work sparse-checkout set experiments/host8-s3-3d20
+          git -C work checkout -q "$GITHUB_SHA"
+          test "$(git -C work rev-parse HEAD)" = "$GITHUB_SHA"
+          cargo +1.81.0 clippy --manifest-path work/experiments/host8-s3-3d20/Cargo.toml --all-targets -- -D warnings
+          cargo +1.81.0 test --manifest-path work/experiments/host8-s3-3d20/Cargo.toml
+          cargo +1.81.0 build --release --manifest-path work/experiments/host8-s3-3d20/Cargo.toml
+          record="$(work/experiments/host8-s3-3d20/target/release/host8-s3-3d20 shard 10)"
+          printf '%s\n' "$record" | grep -Fq 'HOST8_SHARD|id=10|'
+          printf '%s\n' "$record"
+          printf 'record=%s\n' "$record" >> "$GITHUB_OUTPUT"
+
+  shard11:
+    name: Native Host8 slice shard 11 / 19
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    outputs:
+      record: ${{ steps.native.outputs.record }}
+    steps:
+      - name: Native Rust 1.81, Clippy, 3D S3, 8-byte Host8 rooms
+        id: native
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.81.0 --profile minimal --component clippy
+          git clone -q --depth 1 --filter=blob:none --no-checkout --single-branch --branch "gpt6-host8-s3-3d20-20261111" https://github.com/JesseBrown1980/GitRAM.git work
+          git -C work sparse-checkout set experiments/host8-s3-3d20
+          git -C work checkout -q "$GITHUB_SHA"
+          test "$(git -C work rev-parse HEAD)" = "$GITHUB_SHA"
+          cargo +1.81.0 clippy --manifest-path work/experiments/host8-s3-3d20/Cargo.toml --all-targets -- -D warnings
+          cargo +1.81.0 test --manifest-path work/experiments/host8-s3-3d20/Cargo.toml
+          cargo +1.81.0 build --release --manifest-path work/experiments/host8-s3-3d20/Cargo.toml
+          record="$(work/experiments/host8-s3-3d20/target/release/host8-s3-3d20 shard 11)"
+          printf '%s\n' "$record" | grep -Fq 'HOST8_SHARD|id=11|'
+          printf '%s\n' "$record"
+          printf 'record=%s\n' "$record" >> "$GITHUB_OUTPUT"
+
+  shard12:
+    name: Native Host8 slice shard 12 / 19
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    outputs:
+      record: ${{ steps.native.outputs.record }}
+    steps:
+      - name: Native Rust 1.81, Clippy, 3D S3, 8-byte Host8 rooms
+        id: native
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.81.0 --profile minimal --component clippy
+          git clone -q --depth 1 --filter=blob:none --no-checkout --single-branch --branch "gpt6-host8-s3-3d20-20261111" https://github.com/JesseBrown1980/GitRAM.git work
+          git -C work sparse-checkout set experiments/host8-s3-3d20
+          git -C work checkout -q "$GITHUB_SHA"
+          test "$(git -C work rev-parse HEAD)" = "$GITHUB_SHA"
+          cargo +1.81.0 clippy --manifest-path work/experiments/host8-s3-3d20/Cargo.toml --all-targets -- -D warnings
+          cargo +1.81.0 test --manifest-path work/experiments/host8-s3-3d20/Cargo.toml
+          cargo +1.81.0 build --release --manifest-path work/experiments/host8-s3-3d20/Cargo.toml
+          record="$(work/experiments/host8-s3-3d20/target/release/host8-s3-3d20 shard 12)"
+          printf '%s\n' "$record" | grep -Fq 'HOST8_SHARD|id=12|'
+          printf '%s\n' "$record"
+          printf 'record=%s\n' "$record" >> "$GITHUB_OUTPUT"
+
+  shard13:
+    name: Native Host8 slice shard 13 / 19
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    outputs:
+      record: ${{ steps.native.outputs.record }}
+    steps:
+      - name: Native Rust 1.81, Clippy, 3D S3, 8-byte Host8 rooms
+        id: native
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.81.0 --profile minimal --component clippy
+          git clone -q --depth 1 --filter=blob:none --no-checkout --single-branch --branch "gpt6-host8-s3-3d20-20261111" https://github.com/JesseBrown1980/GitRAM.git work
+          git -C work sparse-checkout set experiments/host8-s3-3d20
+          git -C work checkout -q "$GITHUB_SHA"
+          test "$(git -C work rev-parse HEAD)" = "$GITHUB_SHA"
+          cargo +1.81.0 clippy --manifest-path work/experiments/host8-s3-3d20/Cargo.toml --all-targets -- -D warnings
+          cargo +1.81.0 test --manifest-path work/experiments/host8-s3-3d20/Cargo.toml
+          cargo +1.81.0 build --release --manifest-path work/experiments/host8-s3-3d20/Cargo.toml
+          record="$(work/experiments/host8-s3-3d20/target/release/host8-s3-3d20 shard 13)"
+          printf '%s\n' "$record" | grep -Fq 'HOST8_SHARD|id=13|'
+          printf '%s\n' "$record"
+          printf 'record=%s\n' "$record" >> "$GITHUB_OUTPUT"
+
+  shard14:
+    name: Native Host8 slice shard 14 / 19
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    outputs:
+      record: ${{ steps.native.outputs.record }}
+    steps:
+      - name: Native Rust 1.81, Clippy, 3D S3, 8-byte Host8 rooms
+        id: native
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.81.0 --profile minimal --component clippy
+          git clone -q --depth 1 --filter=blob:none --no-checkout --single-branch --branch "gpt6-host8-s3-3d20-20261111" https://github.com/JesseBrown1980/GitRAM.git work
+          git -C work sparse-checkout set experiments/host8-s3-3d20
+          git -C work checkout -q "$GITHUB_SHA"
+          test "$(git -C work rev-parse HEAD)" = "$GITHUB_SHA"
+          cargo +1.81.0 clippy --manifest-path work/experiments/host8-s3-3d20/Cargo.toml --all-targets -- -D warnings
+          cargo +1.81.0 test --manifest-path work/experiments/host8-s3-3d20/Cargo.toml
+          cargo +1.81.0 build --release --manifest-path work/experiments/host8-s3-3d20/Cargo.toml
+          record="$(work/experiments/host8-s3-3d20/target/release/host8-s3-3d20 shard 14)"
+          printf '%s\n' "$record" | grep -Fq 'HOST8_SHARD|id=14|'
+          printf '%s\n' "$record"
+          printf 'record=%s\n' "$record" >> "$GITHUB_OUTPUT"
+
+  shard15:
+    name: Native Host8 slice shard 15 / 19
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    outputs:
+      record: ${{ steps.native.outputs.record }}
+    steps:
+      - name: Native Rust 1.81, Clippy, 3D S3, 8-byte Host8 rooms
+        id: native
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.81.0 --profile minimal --component clippy
+          git clone -q --depth 1 --filter=blob:none --no-checkout --single-branch --branch "gpt6-host8-s3-3d20-20261111" https://github.com/JesseBrown1980/GitRAM.git work
+          git -C work sparse-checkout set experiments/host8-s3-3d20
+          git -C work checkout -q "$GITHUB_SHA"
+          test "$(git -C work rev-parse HEAD)" = "$GITHUB_SHA"
+          cargo +1.81.0 clippy --manifest-path work/experiments/host8-s3-3d20/Cargo.toml --all-targets -- -D warnings
+          cargo +1.81.0 test --manifest-path work/experiments/host8-s3-3d20/Cargo.toml
+          cargo +1.81.0 build --release --manifest-path work/experiments/host8-s3-3d20/Cargo.toml
+          record="$(work/experiments/host8-s3-3d20/target/release/host8-s3-3d20 shard 15)"
+          printf '%s\n' "$record" | grep -Fq 'HOST8_SHARD|id=15|'
+          printf '%s\n' "$record"
+          printf 'record=%s\n' "$record" >> "$GITHUB_OUTPUT"
+
+  shard16:
+    name: Native Host8 slice shard 16 / 19
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    outputs:
+      record: ${{ steps.native.outputs.record }}
+    steps:
+      - name: Native Rust 1.81, Clippy, 3D S3, 8-byte Host8 rooms
+        id: native
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.81.0 --profile minimal --component clippy
+          git clone -q --depth 1 --filter=blob:none --no-checkout --single-branch --branch "gpt6-host8-s3-3d20-20261111" https://github.com/JesseBrown1980/GitRAM.git work
+          git -C work sparse-checkout set experiments/host8-s3-3d20
+          git -C work checkout -q "$GITHUB_SHA"
+          test "$(git -C work rev-parse HEAD)" = "$GITHUB_SHA"
+          cargo +1.81.0 clippy --manifest-path work/experiments/host8-s3-3d20/Cargo.toml --all-targets -- -D warnings
+          cargo +1.81.0 test --manifest-path work/experiments/host8-s3-3d20/Cargo.toml
+          cargo +1.81.0 build --release --manifest-path work/experiments/host8-s3-3d20/Cargo.toml
+          record="$(work/experiments/host8-s3-3d20/target/release/host8-s3-3d20 shard 16)"
+          printf '%s\n' "$record" | grep -Fq 'HOST8_SHARD|id=16|'
+          printf '%s\n' "$record"
+          printf 'record=%s\n' "$record" >> "$GITHUB_OUTPUT"
+
+  shard17:
+    name: Native Host8 slice shard 17 / 19
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    outputs:
+      record: ${{ steps.native.outputs.record }}
+    steps:
+      - name: Native Rust 1.81, Clippy, 3D S3, 8-byte Host8 rooms
+        id: native
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.81.0 --profile minimal --component clippy
+          git clone -q --depth 1 --filter=blob:none --no-checkout --single-branch --branch "gpt6-host8-s3-3d20-20261111" https://github.com/JesseBrown1980/GitRAM.git work
+          git -C work sparse-checkout set experiments/host8-s3-3d20
+          git -C work checkout -q "$GITHUB_SHA"
+          test "$(git -C work rev-parse HEAD)" = "$GITHUB_SHA"
+          cargo +1.81.0 clippy --manifest-path work/experiments/host8-s3-3d20/Cargo.toml --all-targets -- -D warnings
+          cargo +1.81.0 test --manifest-path work/experiments/host8-s3-3d20/Cargo.toml
+          cargo +1.81.0 build --release --manifest-path work/experiments/host8-s3-3d20/Cargo.toml
+          record="$(work/experiments/host8-s3-3d20/target/release/host8-s3-3d20 shard 17)"
+          printf '%s\n' "$record" | grep -Fq 'HOST8_SHARD|id=17|'
+          printf '%s\n' "$record"
+          printf 'record=%s\n' "$record" >> "$GITHUB_OUTPUT"
+
+  shard18:
+    name: Native Host8 slice shard 18 / 19
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    outputs:
+      record: ${{ steps.native.outputs.record }}
+    steps:
+      - name: Native Rust 1.81, Clippy, 3D S3, 8-byte Host8 rooms
+        id: native
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.81.0 --profile minimal --component clippy
+          git clone -q --depth 1 --filter=blob:none --no-checkout --single-branch --branch "gpt6-host8-s3-3d20-20261111" https://github.com/JesseBrown1980/GitRAM.git work
+          git -C work sparse-checkout set experiments/host8-s3-3d20
+          git -C work checkout -q "$GITHUB_SHA"
+          test "$(git -C work rev-parse HEAD)" = "$GITHUB_SHA"
+          cargo +1.81.0 clippy --manifest-path work/experiments/host8-s3-3d20/Cargo.toml --all-targets -- -D warnings
+          cargo +1.81.0 test --manifest-path work/experiments/host8-s3-3d20/Cargo.toml
+          cargo +1.81.0 build --release --manifest-path work/experiments/host8-s3-3d20/Cargo.toml
+          record="$(work/experiments/host8-s3-3d20/target/release/host8-s3-3d20 shard 18)"
+          printf '%s\n' "$record" | grep -Fq 'HOST8_SHARD|id=18|'
+          printf '%s\n' "$record"
+          printf 'record=%s\n' "$record" >> "$GITHUB_OUTPUT"
+
+  shard19:
+    name: Native Host8 slice shard 19 / 19
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    outputs:
+      record: ${{ steps.native.outputs.record }}
+    steps:
+      - name: Native Rust 1.81, Clippy, 3D S3, 8-byte Host8 rooms
+        id: native
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.81.0 --profile minimal --component clippy
+          git clone -q --depth 1 --filter=blob:none --no-checkout --single-branch --branch "gpt6-host8-s3-3d20-20261111" https://github.com/JesseBrown1980/GitRAM.git work
+          git -C work sparse-checkout set experiments/host8-s3-3d20
+          git -C work checkout -q "$GITHUB_SHA"
+          test "$(git -C work rev-parse HEAD)" = "$GITHUB_SHA"
+          cargo +1.81.0 clippy --manifest-path work/experiments/host8-s3-3d20/Cargo.toml --all-targets -- -D warnings
+          cargo +1.81.0 test --manifest-path work/experiments/host8-s3-3d20/Cargo.toml
+          cargo +1.81.0 build --release --manifest-path work/experiments/host8-s3-3d20/Cargo.toml
+          record="$(work/experiments/host8-s3-3d20/target/release/host8-s3-3d20 shard 19)"
+          printf '%s\n' "$record" | grep -Fq 'HOST8_SHARD|id=19|'
+          printf '%s\n' "$record"
+          printf 'record=%s\n' "$record" >> "$GITHUB_OUTPUT"
+
+  fan_in:
+    name: Independent all-20 ordered global HBP/HBI/SHA/SH/HASH
+    needs: [shard00, shard01, shard02, shard03, shard04, shard05, shard06, shard07, shard08, shard09, shard10, shard11, shard12, shard13, shard14, shard15, shard16, shard17, shard18, shard19]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - name: Fail closed on any missing or failed shard
+        shell: bash
+        run: |
+          set -euo pipefail
+          test '${{ join(needs.*.result, ',') }}' = 'success,success,success,success,success,success,success,success,success,success,success,success,success,success,success,success,success,success,success,success'
+      - name: Verify 20 checkpoints and seal one global state receipt
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.81.0 --profile minimal --component clippy
+          git clone -q --depth 1 --filter=blob:none --no-checkout --single-branch --branch "gpt6-host8-s3-3d20-20261111" https://github.com/JesseBrown1980/GitRAM.git work
+          git -C work sparse-checkout set experiments/host8-s3-3d20
+          git -C work checkout -q "$GITHUB_SHA"
+          test "$(git -C work rev-parse HEAD)" = "$GITHUB_SHA"
+          cargo +1.81.0 build --release --manifest-path work/experiments/host8-s3-3d20/Cargo.toml
+          {
+            printf '%s\n' '${{ needs.shard00.outputs.record }}'
+            printf '%s\n' '${{ needs.shard01.outputs.record }}'
+            printf '%s\n' '${{ needs.shard02.outputs.record }}'
+            printf '%s\n' '${{ needs.shard03.outputs.record }}'
+            printf '%s\n' '${{ needs.shard04.outputs.record }}'
+            printf '%s\n' '${{ needs.shard05.outputs.record }}'
+            printf '%s\n' '${{ needs.shard06.outputs.record }}'
+            printf '%s\n' '${{ needs.shard07.outputs.record }}'
+            printf '%s\n' '${{ needs.shard08.outputs.record }}'
+            printf '%s\n' '${{ needs.shard09.outputs.record }}'
+            printf '%s\n' '${{ needs.shard10.outputs.record }}'
+            printf '%s\n' '${{ needs.shard11.outputs.record }}'
+            printf '%s\n' '${{ needs.shard12.outputs.record }}'
+            printf '%s\n' '${{ needs.shard13.outputs.record }}'
+            printf '%s\n' '${{ needs.shard14.outputs.record }}'
+            printf '%s\n' '${{ needs.shard15.outputs.record }}'
+            printf '%s\n' '${{ needs.shard16.outputs.record }}'
+            printf '%s\n' '${{ needs.shard17.outputs.record }}'
+            printf '%s\n' '${{ needs.shard18.outputs.record }}'
+            printf '%s\n' '${{ needs.shard19.outputs.record }}'
+          } > shard-records.hbp
+          test "$(wc -l < shard-records.hbp)" -eq 20
+          work/experiments/host8-s3-3d20/target/release/host8-s3-3d20 fan-in shard-records.hbp | tee global-result.hbp
+          grep -Fq 'VERDICT|HOST8_3D_20|PASS|' global-result.hbp
+          head -n 19 shard-records.hbp > truncated.hbp
+          if work/experiments/host8-s3-3d20/target/release/host8-s3-3d20 fan-in truncated.hbp >/dev/null 2>&1; then echo 'MISSING_SHARD_CONTROL=FAIL'; exit 1; fi
+          sed '1s/id=0/id=99/' shard-records.hbp > corrupted.hbp
+          if work/experiments/host8-s3-3d20/target/release/host8-s3-3d20 fan-in corrupted.hbp >/dev/null 2>&1; then echo 'TAMPERED_SHARD_CONTROL=FAIL'; exit 1; fi
+          echo 'MISSING_SHARD_CONTROL=PASS|TAMPERED_SHARD_CONTROL=PASS|r9_runs=0|json=0'
