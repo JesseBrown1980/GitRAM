@@ -1,0 +1,67 @@
+name: YM4-06C 3D S3 actual 21-state effective-spectrum certificate
+
+on:
+  push:
+    branches: [gpt6-ym4-06c-3d-real-spectrum-20261111]
+    paths:
+      - '.github/workflows/ym4-06c-3d-spectrum.yml'
+      - 'experiments/ym4-06c-spectrum/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ym4-06c-spectrum-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  spectrum:
+    name: Exact 21x21 characteristic polynomial and full first-gap bound
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Native Git checkout of exact commit, no Node/V8 actions
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone -q --filter=blob:none --no-checkout --branch gpt6-ym4-06c-3d-real-spectrum-20261111 https://github.com/JesseBrown1980/GitRAM.git work
+          git -C work sparse-checkout set experiments/ym4-06c-spectrum
+          git -C work checkout -q "$GITHUB_SHA"
+          test "$(git -C work rev-parse HEAD)" = "$GITHUB_SHA"
+          echo "HEAD|sha=$GITHUB_SHA|json=0"
+      - name: Rust 1.81 exact integers, strict Clippy and tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.81.0 --profile minimal --component clippy
+          cargo +1.81.0 clippy --manifest-path work/experiments/ym4-06c-spectrum/Cargo.toml --locked --all-targets -- -D warnings
+          cargo +1.81.0 test --manifest-path work/experiments/ym4-06c-spectrum/Cargo.toml --locked
+          cargo +1.81.0 build --release --manifest-path work/experiments/ym4-06c-spectrum/Cargo.toml --locked
+      - name: Enumerate paths, reconstruct integer matrix, certify actual effective eigenvalue roots
+        shell: bash
+        run: |
+          set -euo pipefail
+          BIN=work/experiments/ym4-06c-spectrum/target/release/ym4-06c-spectrum
+          "$BIN" output | tee EXACT-3D-SPECTRUM.log
+          grep -Fq 'YM4_06C_GATE|PASS|' EXACT-3D-SPECTRUM.log
+          grep -Fq 'CHARPOLY|matrix_dim=21|matrix_scaling=1182720|maximum_row_sum=14021568|20_primes_modular_CRT=PASS' EXACT-3D-SPECTRUM.log
+          grep -Fq 'SPLIT_COEFF|delta_num_gt=170599|delta_num_lt=170601|den=1182720' EXACT-3D-SPECTRUM.log
+          grep -Fq 'FULL_FIRST_GAP|r=2187|lower_gt_JE=1/120000000000' EXACT-3D-SPECTRUM.log
+          grep -Fq 'E22_E21_lower_JE=13050' EXACT-3D-SPECTRUM.log
+          test "$(grep -Fc 'MATRIX_ROW|' output/SPECTRAL-21.hbp)" -eq 21
+          sha256sum output/SPECTRAL-21.hbp output/SPECTRAL-21.hbi output/SPECTRAL-21.anchor | tee EXACT-3D-SPECTRUM.sha256
+          echo 'YM4_06C_HOSTED|PASS|spectral_matrix_21=EXACT|full_gap_2187=NONTRIVIAL_CERTIFIED_LOWER|r9_runs=0|json=0'
+      - name: Deliberate coefficient corruption must fail
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp -r work/experiments/ym4-06c-spectrum bad
+          sed -i 's/const L: u64 = 1_182_720;/const L: u64 = 1_182_721;/' bad/src/main.rs
+          if cargo +1.81.0 run --release --quiet --manifest-path bad/Cargo.toml --locked -- /tmp/corrupted >bad.log 2>&1; then
+            echo 'PLANT|name=wrong_denominator|result=FAIL|json=0'
+            exit 1
+          fi
+          grep -Fq '4th-order exact common denominator' bad.log
+          echo 'PLANT|name=wrong_denominator|result=REJECTED|json=0'
+          sha256sum -c EXACT-3D-SPECTRUM.sha256
