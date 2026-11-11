@@ -1,0 +1,85 @@
+name: GitRAM Stage B exhaustive independent rows
+on:
+  push:
+    branches: [gpt6-floor-stageb-full-compare-20261110]
+    paths:
+      - stageb/lookup_stagea.rs
+      - stageb/patch_engine_rowdump.py
+      - stageb/stageb_compare.py
+      - stageb/run_full_stageb.sh
+      - .github/workflows/gpt6-stageb-full-compare.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stageb-mapped-exact-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  compare:
+    name: Compare every class m0=${{ matrix.m0 }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 260
+    strategy:
+      fail-fast: false
+      matrix:
+        m0: [11, 12, 13]
+    steps:
+      - name: Checkout GPT-6 comparison code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Checkout frozen independent Stage A results and prediction history
+        uses: actions/checkout@v4
+        with:
+          repository: JesseBrown1980/GitRAM
+          ref: bed7fc80e5d21d4e4f388764507f818633c377ac
+          fetch-depth: 2
+          path: cleanroom
+          persist-credentials: false
+      - name: Checkout published v1 engine without modifying its repository
+        uses: actions/checkout@v4
+        with:
+          repository: JesseBrown1980/Finite-universe-Yang-mills-existence-and-mass-gap-using-HEB-C
+          ref: e74d8a46e86034096fd9c9231c87f594f17a93bf
+          path: finite
+          persist-credentials: false
+      - name: Install exact Rust 1.81 toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.81.0 --profile minimal --component clippy
+          rustc +1.81.0 --version
+          cargo +1.81.0 --version
+      - name: Rebuild both implementations, verify known answers and compare all exact rows
+        shell: bash
+        run: bash stageb/run_full_stageb.sh "${{ matrix.m0 }}"
+      - name: Archive evidence even for errors or mathematical counterexamples
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stageb-full-m${{ matrix.m0 }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: |
+            out/*.log
+            out/*.time
+            out/*.sha256
+            out/*.hbp
+            out/*.diff
+            out/engine-original.rs
+            out/engine-patch.log
+            out/engine-patch.diff
+            out/stage-input.log
+            out/stage-replay.log
+            out/stage-replay.time
+            out/stage-replay.log
+            out/kat-engine.hbp
+            out/kat-stagea.hbp
+            out/kat-verified.log
+            out/engine-rows.hbp.gz
+            out/engine-transport.hbp.gz
+            out/class-map.hbp.gz
+            out/decision.hbp
