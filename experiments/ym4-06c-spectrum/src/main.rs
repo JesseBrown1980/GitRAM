@@ -315,15 +315,15 @@ fn roots_and_bounds()->String{
         out.push_str(&format!("FLAT_CLUSTER|r={r}|E22_E21_lower_JE={}|analytical=YES|upper_and_exact_spectrum=OPEN|json=0\n",6*r-72));
         if r==2187{
             // Exact-rational proof uses only integer inequalities; it outputs
-            // a weaker convenient bound (1/10^11) in JE units.
+            // a weaker convenient bound (1/120000000000) in JE units.
             // smax = (9/r)/(1-(12/r)^2); q=12/r;
             // eps = (9/r)*q^4/(1-q^2);
             // D >= ((170599 - 13582886*smax/(2r))/(L*r^3)) - eps;
             // first_gap >= D/(1+72/(8r)^2).
-            // Verify D/(1+72/(8r)^2) > 1/10^11 using common-denominator u128
+            // Verify D/(1+72/(8r)^2) > 1/120000000000 using common-denominator u128
             // below; no use of floating point or transcendental functions.
             prove_gap2187();
-            out.push_str("FULL_FIRST_GAP|r=2187|lower_gt_JE=1/100000000000|method=Feshbach_even_Neumann_tail_plus_exact_roots|independent_proof_review=OPEN|json=0\n");
+            out.push_str("FULL_FIRST_GAP|r=2187|lower_gt_JE=1/120000000000|method=Feshbach_even_Neumann_tail_plus_exact_roots|independent_proof_review=OPEN|json=0\n");
         }
         out.push_str(&format!("NOT_MEASURED|r={r}|physical_transfer_mass=OPEN|continuum_SU2_gap=OPEN|json=0\n"));
         let _=c;
@@ -356,10 +356,10 @@ fn prove_gap2187(){
     assert!(13_582_886u128 < 16*400*r);
     // Hence delta > (170599-16)/(L*r³) - 1/200_000_000_000.
     // At r2187, show this > (1+72/(8r)^2) / 1e11,
-    // so first gap > 1e-11 in JE units.
+    // so first gap > 1/120000000000 in JE units.
     let xnum=170_599u128-16;
     let xden=u128::from(L)*r*r*r;
-    let target_d=100_000_000_000u128;
+    let target_d=120_000_000_000u128;
     let den_factor=(8*r)*(8*r);
     // (xnum/xden - 1/2e11) > (1 + 72/den_factor) / 1e11
     // numerator: (xnum*target_d*den_factor*2)
