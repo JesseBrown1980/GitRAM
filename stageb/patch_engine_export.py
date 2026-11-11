@@ -43,7 +43,7 @@ for line in lines:
         counts["gz_feed"] += 1
     elif line == "    ntail += len(tails)\n":
         out.append(line)
-        out.append("    _stageb_meta.write('V|key=%d|M=%d|size=%d|W=%d\\n' % (cls2cert[ci], M, cls_size[ci], cls_W[ci]))\n")
+        out.append("    _stageb_meta.write('V|key=%d|M=%d|size=%d|W=%d|json=0\\n' % (cls2cert[ci], M, cls_size[ci], cls_W[ci]))\n")
         counts["metadata"] += 1
     elif line == "own_hash = rh.hexdigest()\n":
         out.append(line)
