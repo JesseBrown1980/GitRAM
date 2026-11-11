@@ -1,8 +1,8 @@
 //! Exact 2x2x2 S3 cost-six magnetic support solver.
 //! Tree-gauge backtracking with forced trivial-plaquette constraints;
 //! independent from the two-hop flat-state walk enumeration.
-use super::{inv,mul,Lattice,NL,TRANS};
-use std::collections::BTreeSet;
+use super::{conj,inv,mul,Lattice,NL,TRANS};
+use std::collections::{BTreeMap,BTreeSet};
 const UNKNOWN:u8=255;
 fn hol(u:&[u8;NL],f:&[usize;4])->Option<u8>{
     if f.iter().any(|&k|u[k]==UNKNOWN){return None;}
@@ -85,6 +85,18 @@ pub fn certify(lat:&Lattice)->usize{
     }
     assert_eq!(supports,12);
     assert_eq!(states.len(),216);
+    let mut classes=BTreeMap::<u64,usize>::new();
+    for &key in &states {
+        let u=lat.decode(key);
+        let canonical=(0..6u8).map(|g|{
+            let mut v=u;
+            for x in &mut v {*x=conj(g,*x);}
+            lat.encode(&v)
+        }).min().unwrap();
+        *classes.entry(canonical).or_default()+=1;
+    }
+    assert_eq!(classes.len(),36,"M6 physical gauge orbits");
+    assert!(classes.values().all(|&n|n==6),"all M6 conjugation stabilizers must be trivial");
     for &key in &states {
         assert_eq!(lat.magnetic(key),6);
         for link in 0..NL {for t in TRANS {
