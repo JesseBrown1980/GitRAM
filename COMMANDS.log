@@ -1,0 +1,251 @@
+=== 2026-11-10T23:36:39Z /mnt/c/tmp/opus55/cleanroom-rows/run/01-setup.sh
+    #!/bin/bash
+    . /mnt/c/tmp/opus55/cleanroom-rows/run/lib.sh
+    [ -d .git ] || git init -q .
+    nproc; free -m | head -2; python3 --version; cargo +1.81 --version; rustc +1.81 --version; df -h /root | tail -1
+    ls -la /root/cleanroom-rows
+=== 2026-11-10T23:37:12Z /mnt/c/tmp/opus55/cleanroom-rows/run/02-predict.sh
+    #!/bin/bash
+    . /mnt/c/tmp/opus55/cleanroom-rows/run/lib.sh
+    cp /mnt/c/tmp/opus55/cleanroom-rows/work/predict.py /root/cleanroom-rows/predict.py
+    python3 predict.py > PREDICT-STAGE-A.hbp
+    head -16 PREDICT-STAGE-A.hbp; wc -l PREDICT-STAGE-A.hbp
+    /usr/bin/time -v python3 predict.py brute 2> brute.time | tee PREDICT-BRUTE-VALIDATION.hbp
+    grep -E "Maximum resident|Elapsed" brute.time
+=== 2026-11-10T23:37:33Z /mnt/c/tmp/opus55/cleanroom-rows/run/03-commit1.sh
+    #!/bin/bash
+    . /mnt/c/tmp/opus55/cleanroom-rows/run/lib.sh
+    rm -f brute.time
+    printf '* text eol=lf\n' > .gitattributes
+    git add .gitattributes predict.py PREDICT-STAGE-A.hbp PREDICT-BRUTE-VALIDATION.hbp
+    git -c user.name="Jesse Daniel Brown" -c user.email="plasmatoid@gmail.com" commit -q -m "Stage A predictions: independent per-M orbit and weight count (character theory + Burnside), before enumeration"
+    git log --format='%H %an <%ae> %s' ; git status --short
+    sha256sum PREDICT-STAGE-A.hbp
+=== 2026-11-10T23:43:24Z /mnt/c/tmp/opus55/cleanroom-rows/run/04-build.sh
+    #!/bin/bash
+    . /mnt/c/tmp/opus55/cleanroom-rows/run/lib.sh
+    mkdir -p src out
+    cp /mnt/c/tmp/opus55/cleanroom-rows/work/Cargo.toml .
+    cp /mnt/c/tmp/opus55/cleanroom-rows/work/src/*.rs src/
+    printf 'target/\n' > .gitignore
+    cargo +1.81 clippy --release -- -D warnings 2>&1 | tail -40; echo "clippy_exit=${PIPESTATUS[0]}"
+    cargo +1.81 build --release 2>&1 | tail -3; echo "build_exit=${PIPESTATUS[0]}"
+=== 2026-11-10T23:43:36Z /mnt/c/tmp/opus55/cleanroom-rows/run/04-build.sh
+    #!/bin/bash
+    . /mnt/c/tmp/opus55/cleanroom-rows/run/lib.sh
+    mkdir -p src out
+    cp /mnt/c/tmp/opus55/cleanroom-rows/work/Cargo.toml .
+    cp /mnt/c/tmp/opus55/cleanroom-rows/work/src/*.rs src/
+    printf 'target/\n' > .gitignore
+    cargo +1.81 clippy --release -- -D warnings 2>&1 | tail -40; echo "clippy_exit=${PIPESTATUS[0]}"
+    cargo +1.81 build --release 2>&1 | tail -3; echo "build_exit=${PIPESTATUS[0]}"
+=== 2026-11-10T23:43:47Z /mnt/c/tmp/opus55/cleanroom-rows/run/05-small.sh
+    #!/bin/bash
+    . /mnt/c/tmp/opus55/cleanroom-rows/run/lib.sh
+    mkdir -p out/small
+    for m in 3 4 6 7 8; do
+      /usr/bin/time -v ./target/release/cleanrows run $m out/small PREDICT-STAGE-A.hbp --rep all --orbit-balance > out/small/stdout-m$m.txt 2> out/small/time-m$m.txt
+      echo "m0=$m exit=$?"
+      grep -E "^(TOTALS|CHECK|RUN|FINGERPRINT|ROWS)" out/small/stdout-m$m.txt
+      grep -E "Maximum resident|Elapsed" out/small/time-m$m.txt
+    done
+=== 2026-11-10T23:45:14Z /mnt/c/tmp/opus55/cleanroom-rows/run/06-main.sh
+    #!/bin/bash
+    . /mnt/c/tmp/opus55/cleanroom-rows/run/lib.sh
+    mkdir -p out/main
+    for m in 11 12 13; do
+      /usr/bin/time -v ./target/release/cleanrows run $m out/main PREDICT-STAGE-A.hbp --rep sample > out/main/stdout-m$m.txt 2> out/main/time-m$m.txt
+      echo "m0=$m exit=$?" >> out/main/progress.txt
+    done
+    echo done >> out/main/progress.txt
+=== 2026-11-10T23:47:27Z /mnt/c/tmp/opus55/cleanroom-rows/run/08-progress.sh
+    #!/bin/bash
+    . /mnt/c/tmp/opus55/cleanroom-rows/run/lib.sh
+    cat out/main/progress.txt 2>/dev/null; ls -la out/main; ps -o pid,etime,rss,args -C cleanrows
+=== 2026-11-10T23:47:35Z /mnt/c/tmp/opus55/cleanroom-rows/run/09-wait-main.sh
+    #!/bin/bash
+    . /mnt/c/tmp/opus55/cleanroom-rows/run/lib.sh
+    until grep -q '^done' out/main/progress.txt; do sleep 5; done
+    cat out/main/progress.txt
+    for m in 11 12 13; do
+      echo "--- m0=$m"; grep -vE '^(HIST)' out/main/stdout-m$m.txt
+      grep -E "Maximum resident|Elapsed" out/main/time-m$m.txt
+    done
+    ls -la out/main/*.hbp
+=== 2026-11-10T23:48:10Z /mnt/c/tmp/opus55/cleanroom-rows/run/07-controls.sh
+    #!/bin/bash
+    . /mnt/c/tmp/opus55/cleanroom-rows/run/lib.sh
+    mkdir -p out/controls
+    : > out/controls/CONTROLS.hbp
+    base=$(grep '^ROWS' out/small/stdout-m7.txt | sed 's/.*sha256=\([0-9a-f]*\).*/\1/')
+    for mu in 1 2 3 4 5 6 7 8; do
+      /usr/bin/time -v ./target/release/cleanrows run 7 out/controls PREDICT-STAGE-A.hbp --rep all --orbit-balance --mut $mu --tag -mut$mu > out/controls/stdout-mut$mu.txt 2> out/controls/time-mut$mu.txt
+      ex=$?
+      fails=$(grep '^CHECK' out/controls/stdout-mut$mu.txt | grep 'result=FAIL' | sed 's/CHECK|name=\([^|]*\)|.*/\1/' | tr '\n' ',' | sed 's/,$//')
+      sha=$(grep '^ROWS' out/controls/stdout-mut$mu.txt | sed 's/.*sha256=\([0-9a-f]*\).*/\1/')
+      same=NO; [ "$sha" = "$base" ] && same=YES
+      rss=$(grep 'Maximum resident' out/controls/time-mut$mu.txt | awk '{print $NF}')
+      echo "CONTROL|m0=7|mutation=$mu|exit=$ex|failed_checks=${fails:-none}|rows_sha_equals_unmutated=$same|maxrss_kib=$rss|json=0" | tee -a out/controls/CONTROLS.hbp
+    done
+    rm -f out/controls/rows-m7-mut*.hbp
+=== 2026-11-10T23:50:12Z /mnt/c/tmp/opus55/cleanroom-rows/run/10-ctl-fp.sh
+    #!/bin/bash
+    . /mnt/c/tmp/opus55/cleanroom-rows/run/lib.sh
+    grep -h '^FINGERPRINT' out/small/stdout-m7.txt out/controls/stdout-mut7.txt out/controls/stdout-mut8.txt out/controls/stdout-mut3.txt
+    grep -h '^TOTALS' out/small/stdout-m7.txt out/controls/stdout-mut7.txt
+    grep -h '^CHECK' out/controls/stdout-mut3.txt out/controls/stdout-mut6.txt out/controls/stdout-mut5.txt | cut -c1-200
+=== 2026-11-10T23:50:48Z /mnt/c/tmp/opus55/cleanroom-rows/run/04-build.sh
+    #!/bin/bash
+    . /mnt/c/tmp/opus55/cleanroom-rows/run/lib.sh
+    mkdir -p src out
+    cp /mnt/c/tmp/opus55/cleanroom-rows/work/Cargo.toml .
+    cp /mnt/c/tmp/opus55/cleanroom-rows/work/src/*.rs src/
+    printf 'target/\n' > .gitignore
+    cargo +1.81 clippy --release -- -D warnings 2>&1 | tail -40; echo "clippy_exit=${PIPESTATUS[0]}"
+    cargo +1.81 build --release 2>&1 | tail -3; echo "build_exit=${PIPESTATUS[0]}"
+=== 2026-11-10T23:50:59Z /mnt/c/tmp/opus55/cleanroom-rows/run/11-all.sh
+    #!/bin/bash
+    # Final sequence with the final binary: main runs, second readings, label test, controls, small cutoffs, full checks.
+    . /mnt/c/tmp/opus55/cleanroom-rows/run/lib.sh
+    cp /mnt/c/tmp/opus55/cleanroom-rows/work/verify.py /mnt/c/tmp/opus55/cleanroom-rows/work/label.py .
+    ulimit -v 2000000
+    B=./target/release/cleanrows
+    P=PREDICT-STAGE-A.hbp
+    rm -rf out; mkdir -p out/main out/small out/controls out/full
+    : > out/progress.txt
+    for m in 11 12 13; do
+      /usr/bin/time -v $B run $m out/main $P --rep sample > out/main/stdout-m$m.txt 2> out/main/time-m$m.txt
+      echo "main m0=$m exit=$?" >> out/progress.txt
+    done
+    for m in 11 12 13; do
+      /usr/bin/time -v python3 verify.py out/main/rows-m$m.hbp > out/main/verify-m$m.hbp 2> out/main/verify-time-m$m.txt
+      echo "verify m0=$m exit=$? sha256sum=$(sha256sum out/main/rows-m$m.hbp | cut -d' ' -f1)" >> out/progress.txt
+    done
+    # label cross-check: Python moves class representatives by a symmetry and a gauge transformation, Rust labels them
+    python3 label.py --variants out/main/rows-m13.hbp 300 > out/main/label-variants.txt
+    ok=0; bad=0; n=0
+    while read cfg key m; do
+      n=$((n+1))
+      if [ $n -le 20 ]; then line=$($B label $cfg out/main/rows-m13.hbp); else line=$($B label $cfg); fi
+      pl=$(python3 label.py $cfg)
+      rk=$(echo "$line" | sed 's/.*class_key=\([0-9]*\).*/\1/'); rm_=$(echo "$line" | sed 's/.*|M=\([0-9]*\).*/\1/')
+      pk=$(echo "$pl" | sed 's/.*class_key=\([0-9]*\).*/\1/')
+      if [ "$rk" = "$key" ] && [ "$rm_" = "$m" ] && [ "$pk" = "$key" ]; then ok=$((ok+1)); else bad=$((bad+1)); fi
+      [ $n -le 3 ] && echo "$line" >> out/main/label-examples.txt
+    done < out/main/label-variants.txt
+    echo "LABELTEST|configs=$n|rust_python_agree=$ok|disagree=$bad|json=0" > out/main/labeltest.hbp
+    echo "labeltest done" >> out/progress.txt
+    # controls at m0 = 7, every check on every class
+    : > out/controls/CONTROLS.hbp
+    /usr/bin/time -v $B run 7 out/controls $P --rep all --orbit-balance --tag -base > out/controls/stdout-base.txt 2> out/controls/time-base.txt
+    base=$(grep '^ROWS' out/controls/stdout-base.txt | sed 's/.*sha256=\([0-9a-f]*\).*/\1/')
+    basefp=$(grep '^FINGERPRINT' out/controls/stdout-base.txt | sed 's/.*sha256=\([0-9a-f]*\).*/\1/')
+    for mu in 1 2 3 9 4 5 6 7 8; do
+      /usr/bin/time -v $B run 7 out/controls $P --rep all --orbit-balance --mut $mu --tag -mut$mu > out/controls/stdout-mut$mu.txt 2> out/controls/time-mut$mu.txt
+      ex=$?
+      fails=$(grep '^CHECK' out/controls/stdout-mut$mu.txt | grep 'result=FAIL' | sed 's/CHECK|name=\([^|]*\)|.*/\1/' | tr '\n' ',' | sed 's/,$//')
+      sha=$(grep '^ROWS' out/controls/stdout-mut$mu.txt | sed 's/.*sha256=\([0-9a-f]*\).*/\1/')
+      fp=$(grep '^FINGERPRINT' out/controls/stdout-mut$mu.txt | sed -n 's/.*sha256=\([0-9a-f]*\).*/\1/p')
+      same=NO; [ "$sha" = "$base" ] && same=YES
+      samefp=NO; [ "$fp" = "$basefp" ] && samefp=YES
+      rss=$(grep 'Maximum resident' out/controls/time-mut$mu.txt | awk '{print $NF}')
+      echo "CONTROL|m0=7|mutation=$mu|exit=$ex|failed_checks=${fails:-none}|rows_sha_equals_unmutated=$same|fingerprint_equals_unmutated=$samefp|maxrss_kib=$rss|json=0" >> out/controls/CONTROLS.hbp
+    done
+    for mu in 4 5 6; do
+      /usr/bin/time -v $B run 11 out/controls $P --rep none --mut $mu --tag -mut$mu > out/controls/stdout-m11-mut$mu.txt 2> out/controls/time-m11-mut$mu.txt
+      ex=$?
+      fails=$(grep '^CHECK' out/controls/stdout-m11-mut$mu.txt | grep 'result=FAIL' | sed 's/CHECK|name=\([^|]*\)|.*/\1/' | tr '\n' ',' | sed 's/,$//')
+      rss=$(grep 'Maximum resident' out/controls/time-m11-mut$mu.txt | awk '{print $NF}')
+      echo "CONTROL|m0=11|mutation=$mu|exit=$ex|failed_checks=${fails:-none}|rep_mode=none|maxrss_kib=$rss|json=0" >> out/controls/CONTROLS.hbp
+    done
+    rm -f out/controls/rows-m*.hbp
+    echo "controls done" >> out/progress.txt
+    for m in 3 4 6 7 8 9 10; do
+      /usr/bin/time -v $B run $m out/small $P --rep all --orbit-balance > out/small/stdout-m$m.txt 2> out/small/time-m$m.txt
+      echo "small m0=$m exit=$?" >> out/progress.txt
+    done
+    /usr/bin/time -v $B run 11 out/full $P --rep all --orbit-balance > out/full/stdout-m11.txt 2> out/full/time-m11.txt
+    echo "full m0=11 exit=$? sha=$(sha256sum out/full/rows-m11.hbp | cut -d' ' -f1)" >> out/progress.txt
+    rm -f out/full/rows-m11.hbp
+    echo ALLDONE >> out/progress.txt
+=== 2026-11-11T00:21:32Z /mnt/c/tmp/opus55/cleanroom-rows/run/13-look.sh
+    #!/bin/bash
+    . /mnt/c/tmp/opus55/cleanroom-rows/run/lib.sh
+    cat out/progress.txt
+    cat out/controls/CONTROLS.hbp
+    cat out/main/labeltest.hbp
+    for m in 11 12 13; do grep -E '^(TOTALS|ROWS|FINGERPRINT|CHECK|RUN|HIST)' out/main/stdout-m$m.txt | cut -c1-400; grep -E '^(VTOTALS|VROWS|VFINGERPRINT|VBALANCE|VRUN)' out/main/verify-m$m.hbp | cut -c1-300; grep -E 'Maximum resident|Elapsed' out/main/time-m$m.txt out/main/verify-time-m$m.txt; done
+    grep -h 'result=FAIL' out/small/stdout-m*.txt out/full/stdout-m11.txt out/main/stdout-m*.txt | wc -l
+    grep -h '^CHECK' out/full/stdout-m11.txt | cut -c1-200
+    grep -E 'Maximum resident|Elapsed' out/full/time-m11.txt out/small/time-m*.txt
+    grep -h '^CHECK' out/controls/stdout-mut9.txt | cut -c1-200
+=== 2026-11-11T00:21:38Z /mnt/c/tmp/opus55/cleanroom-rows/run/12-finalize.sh
+    #!/bin/bash
+    # Assemble results, scan the sources, make the second commit. Nothing is run after this script.
+    . /mnt/c/tmp/opus55/cleanroom-rows/run/lib.sh
+    W=/mnt/c/tmp/opus55/cleanroom-rows/work
+    grep -q '^ALLDONE' out/progress.txt || { echo "runs not finished"; exit 1; }
+    cp $W/FORMAT.md $W/CHOICES.md $W/EXPOSURE.md .
+    grep -qx 'out/' .gitignore || echo 'out/' >> .gitignore
+    cp $W/Cargo.toml . ; cp $W/src/*.rs src/
+    cmp $W/verify.py verify.py && cmp $W/label.py label.py && cmp $W/predict.py predict.py || { echo "staged python differs"; exit 1; }
+    # the binary that produced the results must come from the committed source
+    cargo +1.81 clippy --release -- -D warnings > /tmp/cleanrows-clippy.txt 2>&1; clippy=$?
+    cargo +1.81 build --release 2>&1 | grep -c Compiling > /tmp/cleanrows-rebuild.txt; rebuilt=$(cat /tmp/cleanrows-rebuild.txt)
+    rm -rf results; mkdir -p results/main results/small results/controls results/full
+    for d in main small controls full; do
+      for f in out/$d/*; do
+        case "$f" in
+          *rows-m*.hbp) gzip -n -6 -c "$f" > results/$d/$(basename "$f").gz ;;
+          *) cp "$f" results/$d/ ;;
+        esac
+      done
+    done
+    cp out/progress.txt results/progress.txt
+    R=RESULTS.hbp
+    : > $R
+    echo "RESULTS-HEAD|stage=A|lattice=3x4|group=S3|cutoffs=11,12,13|coupling_used=0|float_used=0|json=0" >> $R
+    for m in 11 12 13; do
+      grep -vE '^SUMMARY-HEAD' out/main/stdout-m$m.txt | sed "s/^PERM|/PERM|m0=$m|/; s/^HIST|/HIST|m0=$m|/; s/^FLAT|/FLAT|m0=$m|/; s/^ENUM|/ENUM|m0=$m|/; s/^CHECK|/CHECK|m0=$m|/; s/^ROWS|/ROWS|m0=$m|/" >> $R
+      sed "s/^V\([A-Z]*\)|/VERIFY-\1|/" out/main/verify-m$m.hbp | sed "s/^VERIFY-\(PERM\|HIST\|BALANCE\|ROWS\|RUN\)|/VERIFY-\1|m0=$m|/" >> $R
+      rs=$(grep '^ROWS' out/main/stdout-m$m.txt | sed 's/.*sha256=\([0-9a-f]*\).*/\1/')
+      vs=$(grep '^VROWS' out/main/verify-m$m.hbp | sed 's/.*sha256=\([0-9a-f]*\).*/\1/')
+      ss=$(sha256sum out/main/rows-m$m.hbp | cut -d' ' -f1)
+      gs=$(gzip -dc results/main/rows-m$m.hbp.gz | sha256sum | cut -d' ' -f1)
+      rf=$(grep '^FINGERPRINT' out/main/stdout-m$m.txt | sed 's/^FINGERPRINT|//')
+      vf=$(grep '^VFINGERPRINT' out/main/verify-m$m.hbp | sed 's/^VFINGERPRINT|//')
+      rt=$(grep '^TOTALS' out/main/stdout-m$m.txt | sed 's/^TOTALS|//')
+      vt=$(grep '^VTOTALS' out/main/verify-m$m.hbp | sed 's/^VTOTALS|//')
+      e1=NO; [ "$rs" = "$vs" ] && [ "$rs" = "$ss" ] && [ "$rs" = "$gs" ] && e1=YES
+      e2=NO; [ "$rf" = "$vf" ] && e2=YES
+      e3=NO; [ "$rt" = "$vt" ] && e3=YES
+      echo "CROSS|m0=$m|rows_sha_rust_python_sha256sum_gzip_equal=$e1|fingerprint_rust_python_equal=$e2|totals_rust_python_equal=$e3|json=0" >> $R
+    done
+    for f in out/main/time-m*.txt out/main/verify-time-m*.txt out/small/time-m*.txt out/full/time-m*.txt out/controls/time-*.txt; do
+      rss=$(grep 'Maximum resident' $f | awk '{print $NF}')
+      wall=$(grep 'Elapsed' $f | awk '{print $NF}')
+      ex=$(grep 'Exit status' $f | awk '{print $NF}')
+      under=YES; [ "$rss" -lt 2097152 ] || under=NO
+      echo "MEM|run=$(echo $f | sed 's|out/||; s|/time-|:|; s|/verify-time-|:verify-|; s|\.txt||')|maxrss_kib=$rss|below_2097152=$under|wall=$(echo $wall | tr ':' 'm')|exit=$ex|json=0" >> $R
+    done
+    for m in 3 4 6 7 8 9 10; do
+      grep -E '^(TOTALS|FINGERPRINT|CHECK|RUN)' out/small/stdout-m$m.txt | sed "s/^CHECK|/SMALL-CHECK|m0=$m|/; s/^TOTALS|/SMALL-TOTALS|/; s/^FINGERPRINT|/SMALL-FINGERPRINT|/; s/^RUN|/SMALL-RUN|/" >> $R
+    done
+    grep -E '^(CHECK|RUN|FINGERPRINT|ROWS)' out/full/stdout-m11.txt | sed "s/^CHECK|/FULL11-CHECK|/; s/^RUN|/FULL11-RUN|/; s/^FINGERPRINT|/FULL11-FINGERPRINT|/; s/^ROWS|/FULL11-ROWS|/" >> $R
+    cat out/controls/CONTROLS.hbp >> $R
+    cat out/main/labeltest.hbp >> $R
+    # source scans
+    fl=$(grep -nE '\b(f32|f64)\b|[0-9]\.[0-9]|float|as f' src/*.rs predict.py verify.py label.py | grep -vc 'FIPS 180-4')
+    dv=$(grep -nE '[^/<]/[^/>]' predict.py verify.py label.py | grep -vcE '^[^:]*:[0-9]+:\s*#|usr/bin')
+    us=$(grep -c 'unsafe' src/*.rs | awk -F: '{s+=$2} END {print s}')
+    cr=$(grep -lU $'\r' *.md *.hbp *.py *.toml src/*.rs COMMANDS.log results/*/*.txt results/*/*.hbp 2>/dev/null | wc -l)
+    badrow=$(cat *.hbp results/*/*.hbp | grep -vcE '^[A-Z0-9-]+(\|[A-Za-z0-9_]+=[^|]*)+\|json=0$')
+    echo "SCAN|float_tokens_in_source=$fl|python_true_division=$dv|unsafe_in_rust=$us|files_with_cr=$cr|hbp_rows_not_matching_grammar=$badrow|clippy_exit=$clippy|crates_recompiled_at_finalize=$rebuilt|json=0" >> $R
+    grep -nE '\b(f32|f64)\b|[0-9]\.[0-9]|float|as f' src/*.rs predict.py verify.py label.py > results/scan-float-matches.txt
+    echo "NOTE|rows_files=results/main/rows-mNN.hbp.gz|compression=gzip_-n_-6|sha256_is_of_uncompressed_bytes=1|json=0" >> $R
+    tail -30 $R | cut -c1-260
+    git add -A .
+    git -c user.name="Jesse Daniel Brown" -c user.email="plasmatoid@gmail.com" commit -q -m "Stage A results: enumeration, rows, fingerprints, checks and controls for m0 = 11, 12, 13"
+    git log --format='%H %an <%ae> %s%n[body:%b]'
+    git status --short | head; git remote -v | wc -l; du -sh .git results
+    git ls-files | head -80

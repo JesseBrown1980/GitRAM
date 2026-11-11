@@ -1,0 +1,17 @@
+main m0=11 exit=0
+main m0=12 exit=0
+main m0=13 exit=0
+verify m0=11 exit=0 sha256sum=38bc112e3456512334a582de791823c9d8816603c65f2c0f7909966d385c7958
+verify m0=12 exit=0 sha256sum=e0c67604816e6cbeb03f6d84a02a02a8b0950beff690c71f4b8ecdf29c6349ca
+verify m0=13 exit=0 sha256sum=c9571982b4ac48daa04aa85d0a56756deecabaf58069fb53222fd257a5b68fe7
+labeltest done
+controls done
+small m0=3 exit=0
+small m0=4 exit=0
+small m0=6 exit=0
+small m0=7 exit=0
+small m0=8 exit=0
+small m0=9 exit=0
+small m0=10 exit=0
+full m0=11 exit=0 sha=38bc112e3456512334a582de791823c9d8816603c65f2c0f7909966d385c7958
+ALLDONE

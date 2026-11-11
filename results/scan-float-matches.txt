@@ -1,0 +1,2 @@
+verify.py:26:    with open(path, "rb") as f:
+label.py:109:        with open(sys.argv[2]) as f:

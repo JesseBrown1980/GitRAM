@@ -1,0 +1,3 @@
+LABEL|class_key=2186906990|M=3|size=12|w=6|W=72|flat=0|core_m11=1|core_m12=1|core_m13=1|id=0|json=0
+LABEL|class_key=10129753|M=7|size=48|w=6|W=288|flat=0|core_m11=1|core_m12=1|core_m13=1|id=297|json=0
+LABEL|class_key=2217280612|M=7|size=48|w=6|W=288|flat=0|core_m11=1|core_m12=1|core_m13=1|id=594|json=0

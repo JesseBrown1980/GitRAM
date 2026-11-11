@@ -1,0 +1,12 @@
+CONTROL|m0=7|mutation=1|exit=0|failed_checks=C9_core_closure_no_unknown_class,C2_class_sizes_sum_to_independent_count,C8_row_structure,C6_class_level_detailed_balance,C7_two_step_tail_balance,C4_representative_independence_all|rows_sha_equals_unmutated=NO|fingerprint_equals_unmutated=NO|maxrss_kib=7384|json=0
+CONTROL|m0=7|mutation=2|exit=0|failed_checks=C9_core_closure_no_unknown_class,C2_class_sizes_sum_to_independent_count,C8_row_structure,C6_class_level_detailed_balance,C7_two_step_tail_balance,C4_representative_independence_all|rows_sha_equals_unmutated=NO|fingerprint_equals_unmutated=NO|maxrss_kib=10084|json=0
+CONTROL|m0=7|mutation=3|exit=0|failed_checks=C4_representative_independence_all|rows_sha_equals_unmutated=YES|fingerprint_equals_unmutated=YES|maxrss_kib=7380|json=0
+CONTROL|m0=7|mutation=9|exit=0|failed_checks=C9_core_closure_no_unknown_class,C8_row_structure,C7_two_step_tail_balance,C4_representative_independence_all|rows_sha_equals_unmutated=NO|fingerprint_equals_unmutated=NO|maxrss_kib=7488|json=0
+CONTROL|m0=7|mutation=4|exit=0|failed_checks=C2_class_sizes_sum_to_independent_count,C6_class_level_detailed_balance,C7_two_step_tail_balance,C4_representative_independence_all|rows_sha_equals_unmutated=NO|fingerprint_equals_unmutated=NO|maxrss_kib=7616|json=0
+CONTROL|m0=7|mutation=5|exit=0|failed_checks=C6_class_level_detailed_balance,C7_two_step_tail_balance,C4_representative_independence_all|rows_sha_equals_unmutated=NO|fingerprint_equals_unmutated=NO|maxrss_kib=7268|json=0
+CONTROL|m0=7|mutation=6|exit=0|failed_checks=C7_two_step_tail_balance,C4_representative_independence_all|rows_sha_equals_unmutated=NO|fingerprint_equals_unmutated=NO|maxrss_kib=7488|json=0
+CONTROL|m0=7|mutation=7|exit=0|failed_checks=none|rows_sha_equals_unmutated=NO|fingerprint_equals_unmutated=YES|maxrss_kib=7788|json=0
+CONTROL|m0=7|mutation=8|exit=0|failed_checks=none|rows_sha_equals_unmutated=YES|fingerprint_equals_unmutated=YES|maxrss_kib=7508|json=0
+CONTROL|m0=11|mutation=4|exit=0|failed_checks=C2_class_sizes_sum_to_independent_count,C6_class_level_detailed_balance,C7_two_step_tail_balance|rep_mode=none|maxrss_kib=149240|json=0
+CONTROL|m0=11|mutation=5|exit=0|failed_checks=C6_class_level_detailed_balance,C7_two_step_tail_balance|rep_mode=none|maxrss_kib=149340|json=0
+CONTROL|m0=11|mutation=6|exit=0|failed_checks=C7_two_step_tail_balance|rep_mode=none|maxrss_kib=149180|json=0
