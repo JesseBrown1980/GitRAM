@@ -51,7 +51,16 @@ jobs:
           grep -Fq 'E22_E21_lower_JE=13050' EXACT-3D-SPECTRUM.log
           test "$(grep -Fc 'MATRIX_ROW|' output/SPECTRAL-21.hbp)" -eq 21
           sha256sum output/SPECTRAL-21.hbp output/SPECTRAL-21.hbi output/SPECTRAL-21.anchor | tee EXACT-3D-SPECTRUM.sha256
-          echo 'YM4_06C_HOSTED|PASS|spectral_matrix_21=EXACT|full_gap_2187=NONTRIVIAL_CERTIFIED_LOWER|r9_runs=0|json=0'
+          EVIDENCE=work/experiments/ym4-06c-spectrum/evidence
+          (cd "$EVIDENCE" && sha256sum -c SHA256SUMS)
+          for file in SPECTRAL-21.hbp SPECTRAL-21.hbi SPECTRAL-21.anchor; do
+            cmp "output/$file" "$EVIDENCE/$file"
+          done
+          grep -Fq 'MAGNETIC6|rooted_states=216|gauge_orbits=36' output/SPECTRAL-21.hbp
+          grep -Fq 'CLUSTER_TWO_SIDED|r=81|' output/SPECTRAL-21.hbp
+          grep -Fq 'CLUSTER_TWO_SIDED|r=2187|' output/SPECTRAL-21.hbp
+          grep -Fq 'upper_lt_JE=1/50000000000|' output/SPECTRAL-21.hbp
+          echo 'YM4_06C_HOSTED|PASS|spectral_matrix_21=EXACT|full_gap_2187=TWO_SIDED_ENCLOSURE|cluster_gap_81_2187=TWO_SIDED_ENCLOSURE|original_receipts=BYTE_IDENTICAL|r9_runs=0|json=0'
       - name: Deliberate coefficient corruption must fail
         shell: bash
         run: |
