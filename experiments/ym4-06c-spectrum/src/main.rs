@@ -283,8 +283,8 @@ fn check_roots() {
     let cr=[(12_923_213,12_923_214),(13_156_644,13_156_645),(13_412_285,13_412_286)];
     let qr=[(12_761_408,12_761_409),(13_010_879,13_010_880),
         (13_174_351,13_174_352),(13_290_715,13_290_716),(13_582_885,13_582_886)];
-    for &(a,b) in &cr {assert!(eval_poly(a,&CUBIC)*eval_poly(b,&CUBIC)<0,"cubic sign change");}
-    for &(a,b) in &qr {assert!(eval_poly(a,&QUINTIC)*eval_poly(b,&QUINTIC)<0,"quintic sign change");}
+    for &(a,b) in &cr {assert!(eval_poly(a,&CUBIC).signum() == -eval_poly(b,&CUBIC).signum(),"cubic sign change");}
+    for &(a,b) in &qr {assert!(eval_poly(a,&QUINTIC).signum() == -eval_poly(b,&QUINTIC).signum(),"quintic sign change");}
     assert!(qr[4].0>cr[2].1 && cr[2].0>qr[3].1);
 }
 fn check_characteristic(c:&[[u64;NC];NC]){
