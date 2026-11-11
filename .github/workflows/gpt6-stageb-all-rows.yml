@@ -1,3 +1,4 @@
+# B2 rerun: require HBP json=0 in exported V metadata; mathematical inputs unchanged.
 name: GitRAM Stage B exact mapped every-row and tail comparison
 on:
   push:
