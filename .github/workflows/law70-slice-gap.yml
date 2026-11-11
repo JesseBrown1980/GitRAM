@@ -52,6 +52,11 @@ jobs:
           grep -Fq 'LEVEL|k=10|n=59049|a_over_a0=1/59049|' output/SLICE.hbp
           test "$(grep -Fc 'HASH_WITNESS|k=' output/SLICE.hbp)" -eq 10
           (cd output && sha256sum SLICE.hbp SLICE.hbi SLICE.sha SLICE.sh SLICE.hash > SHA256SUMS && sha256sum -c SHA256SUMS)
+          for name in SLICE.hbp SLICE.hbi SLICE.sha SLICE.sh SLICE.hash SHA256SUMS; do
+            printf 'EVIDENCE_BEGIN|file=%s\n' "$name"
+            cat "output/$name"
+            printf 'EVIDENCE_END|file=%s\n' "$name"
+          done
       - name: Tampering and stale-root physical locality controls
         shell: bash
         run: |
