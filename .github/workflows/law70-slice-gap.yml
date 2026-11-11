@@ -52,6 +52,12 @@ jobs:
           grep -Fq 'LEVEL|k=10|n=59049|a_over_a0=1/59049|' output/SLICE.hbp
           test "$(grep -Fc 'HASH_WITNESS|k=' output/SLICE.hbp)" -eq 10
           (cd output && sha256sum SLICE.hbp SLICE.hbi SLICE.sha SLICE.sh SLICE.hash > SHA256SUMS && sha256sum -c SHA256SUMS)
+          EVIDENCE=work/experiments/law70-slice-gap/evidence
+          (cd "$EVIDENCE" && sha256sum -c SHA256SUMS)
+          for name in SLICE.hbp SLICE.hbi SLICE.sha SLICE.sh SLICE.hash SHA256SUMS; do
+            cmp "output/$name" "$EVIDENCE/$name"
+          done
+          echo 'EVIDENCE|canonical_files=6|byte_for_byte_replay=PASS|json=0'
           for name in SLICE.hbp SLICE.hbi SLICE.sha SLICE.sh SLICE.hash SHA256SUMS; do
             printf 'EVIDENCE_BEGIN|file=%s\n' "$name"
             cat "output/$name"
