@@ -1,0 +1,11 @@
+PREDICT|experiment=LAW70_TERNARY_SLICE_TRANSFER|date=2026-11-11|status=FROZEN_BEFORE_CODE|r9_runs=0|json=0
+SOURCE|law=70|url=https://github.com/JesseBrown1980/ASOLARIA-UNIVERSE-SIMULATOR-with-gravity-light-time-space-color-rime-winding-drills/blob/3f9f42dab6247c40b30921b253e3f73c9e942ca5/books/LAW-70-LEVELS-OF-SHADOW-CATS.md|lambda=(n-1)/n|json=0
+MODEL|n=3^k|k_min=1|k_max=10|a_k=a0/n|toy_local_ternary_transfer=YES|not_physical_YM_transfer=YES|json=0
+TRANSFER|A_n=(3n-3)*I_3+J_3|denominator=3n|eigenvalue_numerators=3n,3(n-1),3(n-1)|residual=exact_zero|json=0
+PRODUCT|spatial_sites=n^3|model=tensor_product_local_transfer|largest=1|second=(n-1)/n|uniform_in_spatial_site_count=YES|json=0
+MASS|a0_m=n*log(n/(n-1))|lower=1|upper=n/(n-1)|continuum_limit_a0_m=1|positive_uniform=YES|json=0
+COUNTERCONTROL|a_n=a0_constant|mass_limit=0|expected=CONTRAST_WITH_SCALED|json=0
+SHADOW|trits=0,1,2|R(x)=x+1_mod3|R^3=I|WAS_IS_WILL=SOURCE_PRESERVED|json=0
+HASH|branching=3|hash_algorithm=SHA256|whole_slice_changes_when_sample_local_leaf_changes=MEASURED_ON_FIXTURES|physical_instant_signal=NOT_INFERRED|json=0
+NEGATIVE|stale_global_root_after_local_change=REJECT|modified_HBP_without_recomputed_anchor=REJECT|json=0
+SCOPE|no_SU2_or_SU3_gauge_constraint|no_reflection_positive_interacting_YM_transfer|no_uniform_YM_gap|no_4D_mass_gap_proof|json=0
