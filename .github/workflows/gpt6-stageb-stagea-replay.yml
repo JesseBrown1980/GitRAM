@@ -1,0 +1,119 @@
+name: GitRAM Stage B independent Stage A immutable source replay
+on:
+  push:
+    branches: [gpt6-stageb-full-20261110]
+    paths: [.github/workflows/gpt6-stageb-stagea-replay.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+concurrency:
+  group: stageb-stagea-replay-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  replay:
+    name: "Clean-room committed-source replay m0=${{ matrix.m0 }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    strategy:
+      fail-fast: false
+      matrix:
+        m0: [11, 12, 13]
+    steps:
+      - name: Checkout exact clean-room result commit
+        uses: actions/checkout@v4
+        with:
+          repository: JesseBrown1980/GitRAM
+          ref: bed7fc80e5d21d4e4f388764507f818633c377ac
+          path: clean
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Freeze authorship, order, and source syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C clean rev-parse HEAD)" = bed7fc80e5d21d4e4f388764507f818633c377ac
+          test "$(git -C clean rev-parse HEAD^)" = b02c892636714ee03c3fac71642f6d9d754b83d0
+          test "$(git -C clean show HEAD:predict.py | sha256sum | cut -d' ' -f1)" = "$(git -C clean show HEAD^:predict.py | sha256sum | cut -d' ' -f1)"
+          test "$(git -C clean show HEAD:PREDICT-STAGE-A.hbp | sha256sum | cut -d' ' -f1)" = "$(git -C clean show HEAD^:PREDICT-STAGE-A.hbp | sha256sum | cut -d' ' -f1)"
+          mkdir -p receipts
+          python3 - <<'PY' | tee receipts/float-scan.hbp
+          import ast, pathlib, re
+          root=pathlib.Path('clean')
+          for p in root.glob('*.py'):
+              t=ast.parse(p.read_text(),filename=str(p))
+              bad=[]
+              for node in ast.walk(t):
+                  if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Div):
+                      bad.append(('true_division', node.lineno))
+                  if isinstance(node, ast.Constant) and type(node.value) is float:
+                      bad.append(('float_literal',node.lineno))
+              assert not bad, f'PY_FLOAT_OR_TRUE_DIVISION|{p}|{bad}'
+              print(f'SCAN|PY|{p.name}|PASS')
+          for p in (root/'src').glob('*.rs'):
+              s=p.read_text()
+              assert not re.search(r'\b(f32|f64|unsafe)\b',s), f'RS_FLOAT_UNSAFE|{p}'
+              print(f'SCAN|RUST|{p.name}|PASS')
+          PY
+      - name: Rust 1.81 strict clippy and reproducible release build
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.81.0 --profile minimal --component clippy
+          (cd clean && cargo +1.81.0 clippy --all-targets --locked -- -D warnings) 2>&1 | tee receipts/clippy.log
+          (cd clean && cargo +1.81.0 build --release --locked -j2) 2>&1 | tee receipts/build.log
+          sha256sum clean/target/release/cleanrows | tee receipts/binary.sha256
+      - name: Reconstruct full independent rows from committed source at no coupling
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p generated
+          case "${{ matrix.m0 }}" in
+            11) sha=38bc112e3456512334a582de791823c9d8816603c65f2c0f7909966d385c7958 ;;
+            12) sha=e0c67604816e6cbeb03f6d84a02a02a8b0950beff690c71f4b8ecdf29c6349ca ;;
+            13) sha=c9571982b4ac48daa04aa85d0a56756deecabaf58069fb53222fd257a5b68fe7 ;;
+          esac
+          ulimit -v 2000000
+          /usr/bin/time -v -o receipts/enum-memory.txt clean/target/release/cleanrows run "${{ matrix.m0 }}" generated clean/PREDICT-STAGE-A.hbp --threads 4 --rep sample | tee receipts/enum.log
+          test "$(sha256sum generated/rows-m${{ matrix.m0 }}.hbp | cut -d' ' -f1)" = "$sha"
+          # A second, frozen copy of every row is committed compressed in Stage A.
+          gzip -dc "clean/results/main/rows-m${{ matrix.m0 }}.hbp.gz" | cmp -s - generated/rows-m${{ matrix.m0 }}.hbp
+          /usr/bin/time -v -o receipts/python-memory.txt python3 -I -B clean/verify.py generated/rows-m${{ matrix.m0 }}.hbp | tee receipts/python-verifier.log
+          python3 - <<'PY' | tee receipts/compare-summary.hbp
+          import pathlib
+          m0="${{ matrix.m0 }}"
+          def parse(p):
+              out={}
+              for line in pathlib.Path(p).read_text().splitlines():
+                  a=line.split('|')
+                  if a[0] not in ('FLAT','PERM','HIST','TOTALS','ROWS','FINGERPRINT','CHECK'):continue
+                  d=dict(x.split('=',1) for x in a[1:] if '=' in x)
+                  # Strip unimportant path formatting; compare same invariant values.
+                  key=(a[0],d.get('M',d.get('class_size',d.get('name',''))))
+                  out[key]={k:v for k,v in d.items() if k not in ('file',)}
+              return out
+          ref=parse('clean/results/main/summary-m'+m0+'.hbp')
+          got=parse('generated/summary-m'+m0+'.hbp')
+          assert ref==got, sorted((k,ref.get(k),got.get(k)) for k in set(ref)|set(got) if ref.get(k)!=got.get(k))[:3]
+          assert all(x['result']=='PASS' for (k,_),x in got.items() if k=='CHECK')
+          print('REPLAY|m0='+m0+'|rows=BYTE_IDENTICAL|summary_invariants=PASS|strict_clippy=PASS|r9_executions=0')
+          PY
+          python3 - <<'PY' | tee receipts/memory-gate.hbp
+          import pathlib,re
+          for name in ('enum','python'):
+              log=pathlib.Path('receipts/'+name+'-memory.txt').read_text()
+              vals=re.findall(r'Maximum resident set size \(kbytes\):\s*(\d+)',log)
+              assert len(vals)==1, name+' memory missing'
+              peak=int(vals[0])
+              assert 0<peak<2097152, 'RESOURCE_LIMIT_EXCEEDED|process='+name+'|kib='+str(peak)
+              print('RESOURCE|process='+name+'|peak_kib='+str(peak)+'|limit_kib=2097152|PASS')
+          PY
+      - name: Upload exact clean-room replay receipts and binary hash
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stageb-source-replay-m${{ matrix.m0 }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: receipts/
