@@ -100,7 +100,8 @@ jobs:
           set -euo pipefail
           rustup toolchain install 1.81.0 --profile minimal
           rustc +1.81.0 --edition=2021 -O -A dead_code stageb/stagea_bulk_label.rs -o bulk
-          mkdir -p out
+          (cd clean && cargo +1.81.0 build --release --locked -j2)
+          mkdir -p out generated
       - name: Decode exact pinned engine classes and map every class by Stage A mathematics
         shell: bash
         run: |
@@ -118,12 +119,21 @@ jobs:
           python3 -I -B stageb/engine_key_decoder.py --keys-file "$keys" --m0 "$m0" --pin-sha256 "$expected" --output out/engine.hbp
           ulimit -v 2000000
           /usr/bin/time -v -o out/lookup-memory.txt ./bulk < out/engine.hbp > out/mapping.hbp
+          # Source replay produces valid, uncompressed Stage A rows. The committed .gz
+          # archive is held due to erroneous global '* text eol=lf' and failed gzip CRC.
+          /usr/bin/time -v -o out/source-memory.txt clean/target/release/cleanrows run "$m0" generated clean/PREDICT-STAGE-A.hbp --threads 4 --rep sample > out/rebuild.log
+          case "$m0" in
+            11) rowsha=38bc112e3456512334a582de791823c9d8816603c65f2c0f7909966d385c7958 ;;
+            12) rowsha=e0c67604816e6cbeb03f6d84a02a02a8b0950beff690c71f4b8ecdf29c6349ca ;;
+            13) rowsha=c9571982b4ac48daa04aa85d0a56756deecabaf58069fb53222fd257a5b68fe7 ;;
+          esac
+          test "$(sha256sum "generated/rows-m$m0.hbp" | cut -d' ' -f1)" = "$rowsha"
           python3 - <<'PY' | tee out/bijection.hbp
           import gzip,pathlib,re
           m0=int("${{ matrix.m0 }}")
-          path=pathlib.Path(f'clean/results/main/rows-m{m0}.hbp.gz')
+          path=pathlib.Path(f'generated/rows-m{m0}.hbp')
           StageA={}
-          with gzip.open(path,'rt',encoding='ascii') as f:
+          with path.open('rt',encoding='ascii') as f:
               for line in f:
                   if line.startswith('R|'):
                       a=dict(x.split('=',1) for x in line.rstrip('\n').split('|')[1:] if '=' in x)
@@ -144,10 +154,12 @@ jobs:
           assert seen==set(StageA), f'bijection_not_onto|missing={len(set(StageA)-seen)}'
           assert len(seen)==count
           print(f'BIJECTION|m0={m0}|engine_classes={count}|stageA_classes={len(StageA)}|injective=PASS|surjective=PASS|M=PASS|source_derived_metadata=AGREEMENT|r9_runs=0')
-          mem=pathlib.Path('out/lookup-memory.txt').read_text()
-          a=re.findall(r'Maximum resident set size \(kbytes\):\s*(\d+)',mem)
-          assert len(a)==1 and 0<int(a[0])<2097152,'RESOURCE_LIMIT_EXCEEDED'
-          print('RESOURCE|process=StageA_bulk_lookup|peak_kib='+a[0]+'|PASS')
+          for proc in ('lookup','source'):
+              mem=pathlib.Path(f'out/{proc}-memory.txt').read_text()
+              a=re.findall(r'Maximum resident set size \(kbytes\):\s*(\d+)',mem)
+              assert len(a)==1 and 0<int(a[0])<2097152,'RESOURCE_LIMIT_EXCEEDED'
+              print(f'RESOURCE|process={proc}|peak_kib={a[0]}|PASS')
+          print('PUBLISHED_GZIP_ARCHIVE=HOLD|reason=git_text_eol_lf_corrupt_binary|source_rows=PINNED_SHA256')
           PY
           sha256sum out/mapping.hbp | tee out/mapping.sha256
       - name: Archive complete mapping and evidence
