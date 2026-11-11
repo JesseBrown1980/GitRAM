@@ -1,0 +1,93 @@
+name: GitRAM Stage B clean-room mutation controls exact source replay
+on:
+  push:
+    branches: [gpt6-stageb-full-20261110]
+    paths: [.github/workflows/gpt6-stageb-controls.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: stageb-controls-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  controls:
+    name: Six detected mutations plus two invariant transformations
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: JesseBrown1980/GitRAM
+          ref: bed7fc80e5d21d4e4f388764507f818633c377ac
+          path: clean
+          persist-credentials: false
+      - name: Exactly Rust 1.81 and frozen source build
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.81.0 --profile minimal --component clippy
+          test "$(git -C clean rev-parse HEAD)" = bed7fc80e5d21d4e4f388764507f818633c377ac
+          (cd clean && cargo +1.81.0 clippy --all-targets --locked -- -D warnings)
+          (cd clean && cargo +1.81.0 build --release --locked -j2)
+          sha256sum clean/target/release/cleanrows
+          mkdir -p out
+      - name: Reproduce entire mutation detection matrix at m0=7
+        shell: bash
+        run: |
+          set -euo pipefail
+          ulimit -v 2000000
+          for mut in 0 1 2 3 4 5 6 7 8 9; do
+            mkdir -p "out/m$mut"
+            /usr/bin/time -v -o "out/m$mut/peak.txt" clean/target/release/cleanrows \
+              run 7 "out/m$mut" clean/PREDICT-STAGE-A.hbp --mut "$mut" --rep all --orbit-balance --threads 4 > "out/m$mut/stdout.hbp"
+            test "$(grep -c '^CHECK|' "out/m$mut/stdout.hbp")" -ge 5
+            python3 - "$mut" <<'PY'
+          import pathlib,re,sys
+          mut=int(sys.argv[1])
+          root=pathlib.Path(f'out/m{mut}')
+          data=(root/'stdout.hbp').read_text()
+          checks={}
+          for line in data.splitlines():
+              if line.startswith('CHECK|'):
+                  p=dict(x.split('=',1) for x in line.split('|')[1:] if '=' in x)
+                  checks[p['name']]=p['result']
+          bad={k for k,v in checks.items() if v=='FAIL'}
+          detected={
+              1:{'C9_core_closure_no_unknown_class'},
+              2:{'C9_core_closure_no_unknown_class'},
+              3:{'C4_representative_independence_all'},
+              4:{'C2_class_sizes_sum_to_independent_count'},
+              5:{'C6_class_level_detailed_balance'},
+              6:{'C7_two_step_tail_balance'},
+              9:{'C4_representative_independence_all'}
+          }
+          if mut in detected:
+              assert detected[mut]<=bad, f'undetected fault mutation={mut} observed={bad}'
+              print(f'MUTATION|id={mut}|detectable=YES|failed_checks={",".join(sorted(bad))}|control=PASS')
+          elif mut in (7,8):
+              assert not bad, f'invariant transformation should not invalidate mathematics mutation={mut} observed={bad}'
+              print(f'MUTATION|id={mut}|literal_global_or_inverse_invariant=YES|failed_checks=none|provenance_disclosure=REQUIRED')
+          else:
+              assert not bad, f'baseline unexpectedly failed {bad}'
+              print('BASELINE|m0=7|PASS')
+          peak=re.findall(r'Maximum resident set size \(kbytes\):\s*(\d+)',(root/'peak.txt').read_text())
+          assert len(peak)==1 and 0<int(peak[0])<2097152
+          print(f'RSS|mutation={mut}|peak_kib={peak[0]}|limit=2097152|PASS')
+          PY
+          done | tee out/controls-verdict.hbp
+          test "$(grep -c 'control=PASS' out/controls-verdict.hbp)" -eq 7
+          test "$(grep -c 'literal_global_or_inverse_invariant=YES' out/controls-verdict.hbp)" -eq 2
+          echo 'STAGE_B_CONTROLS=PASS|six_spec_categories_detected_by_substituted_faults=DISCLOSED|literal_invariants=2|r9_executions=0' | tee -a out/controls-verdict.hbp
+      - name: Archive complete mutation evidence even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stageb-cleanroom-mutation-controls
+          retention-days: 30
+          compression-level: 1
+          if-no-files-found: warn
+          path: |
+            out/controls-verdict.hbp
+            out/m*/peak.txt
+            out/m*/stdout.hbp
