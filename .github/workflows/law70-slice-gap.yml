@@ -1,0 +1,72 @@
+name: Law70 triadic sliced transfer and global hash exact theorem
+
+on:
+  push:
+    branches: [gpt6-law70-ternary-slice-gap-20261111]
+    paths:
+      - '.github/workflows/law70-slice-gap.yml'
+      - 'experiments/law70-slice-gap/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: law70-slice-gap-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  rust-integer-sliced-transfer:
+    name: Rust 1.81 exact local transfer, x3 shadow cycle and 10 SHA global slices
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout native code without Node or V8 actions
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone -q --filter=blob:none --branch gpt6-law70-ternary-slice-gap-20261111 https://github.com/JesseBrown1980/GitRAM.git work
+          git -C work checkout -q "$GITHUB_SHA"
+          test "$(git -C work rev-parse HEAD)" = "$GITHUB_SHA"
+          git -C work show 8c242ab34be362dd7d1adab4284480467fe90ff3:experiments/law70-slice-gap/PREDICT-LAW70-SLICE-GAP-20261111.hbp > /tmp/prediction-frozen.hbp
+          cmp /tmp/prediction-frozen.hbp work/experiments/law70-slice-gap/PREDICT-LAW70-SLICE-GAP-20261111.hbp
+      - name: Strict Clippy and exact-integer native Rust 1.81 tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.81.0 --profile minimal --component clippy
+          SOURCE=work/experiments/law70-slice-gap/main.rs
+          rustup run 1.81.0 clippy-driver --edition 2021 -D warnings --crate-name law70_slice_gap --crate-type bin --emit metadata -o /tmp/law70.rmeta "$SOURCE"
+          rustc +1.81.0 --edition 2021 --test "$SOURCE" -o /tmp/law70-tests
+          /tmp/law70-tests
+          rustc +1.81.0 --edition 2021 -O "$SOURCE" -o /tmp/law70-native
+      - name: Construct and independently replay HBP HBI SHA SH HASH
+        shell: bash
+        run: |
+          set -euo pipefail
+          /tmp/law70-native compute output | tee law70-measure.log
+          /tmp/law70-native verify output | tee law70-verify.log
+          grep -Fq 'LAW70_RESULT|PASS|levels=10|trits=3|' law70-measure.log
+          grep -Fq 'LAW70_VERIFY|PASS|HBI=PASS|HBP=PASS|SHA=PASS|SH=PASS|HASH=PASS|' law70-verify.log
+          grep -Fq 'THEOREM|n=3^k|spacing=a0/n|' output/SLICE.hbp
+          grep -Fq 'LEVEL|k=10|n=59049|a_over_a0=1/59049|' output/SLICE.hbp
+          test "$(grep -Fc 'HASH_WITNESS|k=' output/SLICE.hbp)" -eq 10
+          (cd output && sha256sum SLICE.hbp SLICE.hbi SLICE.sha SLICE.sh SLICE.hash > SHA256SUMS && sha256sum -c SHA256SUMS)
+      - name: Tampering and stale-root physical locality controls
+        shell: bash
+        run: |
+          set -euo pipefail
+          if /tmp/law70-native plant-stale-root > stale.log 2>&1; then
+            echo 'NEGATIVE|stale_root|FAIL|json=0'
+            exit 1
+          fi
+          grep -Fq 'stale global root must fail' stale.log
+          cp -r output corrupted
+          sed -i 's/a0_m_lower=1/a0_m_lower=0/' corrupted/SLICE.hbp
+          if /tmp/law70-native verify corrupted > tampered.log 2>&1; then
+            echo 'NEGATIVE|modified_HBP|FAIL|json=0'
+            exit 1
+          fi
+          grep -Fq 'receipt does not match independent source replay' tampered.log
+          echo 'NEGATIVE|stale_root=REJECTED|modified_HBP=REJECTED|json=0'
+          echo 'LAW70_HOSTED|PASS|mass_toy_uniform_positive=THEOREM|real_YM_mass_gap=UNPROVEN|global_hash_remote_signal=NOT_ESTABLISHED|r9_runs=0|json=0'
