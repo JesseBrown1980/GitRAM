@@ -97,12 +97,21 @@ impl Lattice {
     }
     fn encode(&self,u:&[u8;NL])->u64{
         let mut k=0u64;
-        for &i in &self.free{k=k*6+u64::from(u[i]);}
+        for &i in &self.free{
+            let value=u[i];
+            let digit=u64::from(value/2)*3+u64::from(value%2);
+            k=k*9+digit;
+        }
         k
     }
     fn decode(&self,mut key:u64)->[u8;NL]{
         let mut u=[0u8;NL];
-        for &i in self.free.iter().rev(){u[i]=(key%6)as u8;key/=6;}
+        for &i in self.free.iter().rev(){
+            let d=(key%9)as u8;
+            assert!(d%3<2,"invalid constrained two-trit S3 code");
+            u[i]=2*(d/3)+(d%3);
+            key/=9;
+        }
         assert_eq!(key,0);
         u
     }
@@ -379,7 +388,7 @@ fn execute() {
     let c=physical(&g,&orb,&reps,&size);
     check_characteristic(&c);
     let mut block=String::new();
-    block.push_str("YM4_06C|model=3D_2x2x2_S3|method=rooted_two_hop_exact_gram_and_21_phys_sector|rust=1.81|trinary=YES|json=0\n");
+    block.push_str("YM4_06C|model=3D_2x2x2_S3|method=rooted_two_hop_exact_gram_and_21_phys_sector|address=two_constrained_trits_per_link|rust=1.81|trinary=YES|json=0\n");
     block.push_str(&format!("ENUM|flat_rooted={NF}|flat_phys={NC}|one_step_states={a1}|two_step_states={a2}|one_link_moves={}|two_link_moves={}|json=0\n",NF*NL*3,NF*NL*NL*9));
     for (mag,n) in m{block.push_str(&format!("TWO_STEP_MAG|mag={mag}|states={n}|json=0\n"));}
     block.push_str(&format!("MAGNETIC6|rooted_states={m6_count}|gauge_orbits=36|supports=12|states_per_support=18|internal_one_move_edges=0|json=0\n"));
