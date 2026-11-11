@@ -129,7 +129,8 @@ impl Lattice {
         self.canon(u)
     }
 }
-fn classes(lat:&Lattice)->(Vec<u64>,Vec<[u8;3]>,[usize;NF],[usize;NC],Vec<usize>){
+type FlatClasses=(Vec<u64>,Vec<[u8;3]>,[usize;NF],[usize;NC],Vec<usize>);
+fn classes(lat:&Lattice)->FlatClasses{
     let mut flats=Vec::new();
     let mut triple=Vec::new();
     let mut canonical=Vec::new();
@@ -216,7 +217,7 @@ fn gram(lat:&Lattice,flats:&[u64])->([[u64;NF];NF],BTreeMap<u64,u64>,usize,usize
 fn physical(gram:&[[u64;NF];NF],orbit:&[usize;NF],reps:&[usize;NC],sizes:&[usize])->[[u64;NC];NC]{
     let mut c=[[0u64;NC];NC];
     for i in 0..NC{
-        for j in 0..NF {c[i][orbit[j]]+=gram[reps[i]][j];}
+        for (j,&o) in orbit.iter().enumerate() {c[i][o]+=gram[reps[i]][j];}
     }
     for i in 0..NC{for j in 0..NC{
         assert_eq!(sizes[i] as u64*c[i][j],sizes[j] as u64*c[j][i],"physical weighted adjoint");
