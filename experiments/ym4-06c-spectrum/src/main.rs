@@ -334,7 +334,7 @@ fn roots_and_bounds()->String{
             // Verify D/(1+72/(8r)^2) > 1/120000000000 using common-denominator u128
             // below; no use of floating point or transcendental functions.
             prove_gap2187();
-            out.push_str("FULL_FIRST_GAP|r=2187|lower_gt_JE=1/120000000000|method=Feshbach_even_Neumann_tail_plus_exact_roots|independent_proof_review=OPEN|json=0\n");
+            out.push_str("FULL_FIRST_GAP|r=2187|lower_gt_JE=1/120000000000|upper_lt_JE=1/50000000000|method=Feshbach_even_Neumann_tail_plus_exact_roots|independent_proof_review=OPEN|json=0\n");
         }
         out.push_str(&format!("NOT_MEASURED|r={r}|physical_transfer_mass=OPEN|continuum_SU2_gap=OPEN|json=0\n"));
         let _=c;
@@ -379,6 +379,16 @@ fn prove_gap2187(){
     let left=xnum*eps_den*target_d*den_factor;
     let right=xden*target_d*den_factor + xden*eps_den*(den_factor+72);
     assert!(left>right,"nontrivial full first-gap bound failed");
+    // The same monotone Feshbach comparison from the opposite side:
+    // f'(s)>=1, positive even Neumann tail <= eps, and the 4th-order
+    // second coefficient >= 13,412,285/L. Thus
+    // gap < (170601+16)/(L*r^3) + 1/200_000_000_000
+    // < 1/50_000_000_000. The entire proof uses exact products.
+    let upper_num=170_601u128+16;
+    let upper_den=50_000_000_000u128;
+    let upper_left=upper_num*eps_den*upper_den + xden*upper_den;
+    let upper_right=xden*eps_den;
+    assert!(upper_left<upper_right,"full first-gap upper enclosure failed");
 }
 fn execute() {
     let lat=Lattice::new();
