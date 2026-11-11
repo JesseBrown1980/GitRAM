@@ -364,8 +364,9 @@ fn prove_gap2187(){
     // (xnum/xden - 1/2e11) > (1 + 72/den_factor) / 1e11
     // numerator: (xnum*target_d*den_factor*2)
     // - xden*den_factor - 2*xden*(den_factor+72) > 0.
-    let left=xnum*target_d*den_factor*2;
-    let right=xden*den_factor+2*xden*(den_factor+72);
+    let eps_den=200_000_000_000u128;
+    let left=xnum*eps_den*target_d*den_factor;
+    let right=xden*target_d*den_factor + xden*eps_den*(den_factor+72);
     assert!(left>right,"nontrivial full first-gap bound failed");
 }
 fn execute() {
