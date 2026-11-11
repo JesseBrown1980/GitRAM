@@ -1,0 +1,164 @@
+name: GitRAM Stage B real clean-room lookup convention and bijection
+on:
+  push:
+    branches: [gpt6-stageb-full-20261110]
+    paths: [.github/workflows/gpt6-stageb-known-map.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: stageb-map-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  known:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: JesseBrown1980/GitRAM
+          ref: bed7fc80e5d21d4e4f388764507f818633c377ac
+          path: clean
+          persist-credentials: false
+      - name: Rust 1.81 and build clean-room unchanged class lookup
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C clean rev-parse HEAD)" = bed7fc80e5d21d4e4f388764507f818633c377ac
+          rustup toolchain install 1.81.0 --profile minimal
+          (cd clean && cargo +1.81.0 build --release --locked -j2)
+          rustc +1.81.0 --edition=2021 -O -A dead_code stageb/stagea_bulk_label.rs -o bulk
+          mkdir -p out
+      - name: Three known answers through REAL Stage A Rust and Python class lookup
+        shell: bash
+        run: |
+          set -euo pipefail
+          { python3 -I -B stageb/engine_key_decoder.py --one 1; python3 -I -B stageb/engine_key_decoder.py --one 3; python3 -I -B stageb/engine_key_decoder.py --one 25194240; } > out/known-engine.hbp
+          /usr/bin/time -v -o out/bulk-memory.txt ./bulk < out/known-engine.hbp > out/known-stagea.hbp
+          python3 - <<'PY'
+          import subprocess,pathlib
+          records=[dict(x.split('=',1) for x in line.split('|')[1:]) for line in pathlib.Path('out/known-stagea.hbp').read_text().splitlines()]
+          assert len(records)==3
+          expected={1:(4,'021','021'),3:(6,'120','201'),25194240:(7,None,'021')}
+          for a in records:
+              k=int(a['engine']); m,h13,h23=expected[k]
+              assert int(a['M'])==m and (h13 is None or a['h13']==h13) and a['h23']==h23
+              for route in (['./clean/target/release/cleanrows','label',a['cfg']], ['python3','-I','-B','clean/label.py',a['cfg']]):
+                  s=subprocess.check_output(route,text=True).strip()
+                  fields=dict(x.split('=',1) for x in s.split('|')[1:] if '=' in x)
+                  for key in ('M','size','W'):
+                      assert fields[key]==a[key], (k,key,fields[key],a[key])
+                  assert fields['class_key']==a['stage_key'],(k,fields['class_key'],a['stage_key'])
+              print(f"REAL_LOOKUP|engine={k}|M={m}|stage_class_key={a['stage_key']}|Rust=PASS|Python=PASS|holonomy=PASS")
+          print("REAL_STAGE_A_CONVENTION=PASS|cases=3|r9_runs=0")
+          PY
+          python3 - <<'PY'
+          import pathlib,re
+          a=re.findall(r"Maximum resident set size \(kbytes\):\s*(\d+)",pathlib.Path('out/bulk-memory.txt').read_text())
+          assert len(a)==1 and 0<int(a[0])<2097152
+          print("RESOURCE|process=known_lookup|peak_kib="+a[0]+"|PASS")
+          PY
+      - name: Preserve known-answer receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stageb-real-known-lookup
+          retention-days: 30
+          if-no-files-found: warn
+          path: out/
+
+  map:
+    needs: known
+    name: "Exhaustive class bijection m0=${{ matrix.m0 }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix: {m0: [11,12,13]}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: JesseBrown1980/GitRAM
+          ref: bed7fc80e5d21d4e4f388764507f818633c377ac
+          path: clean
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: JesseBrown1980/Finite-universe-Yang-mills-existence-and-mass-gap-using-HEB-C
+          ref: e74d8a46e86034096fd9c9231c87f594f17a93bf
+          path: finite
+          persist-credentials: false
+      - name: Build original Stage A lattice lookup, no modifications
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.81.0 --profile minimal
+          rustc +1.81.0 --edition=2021 -O -A dead_code stageb/stagea_bulk_label.rs -o bulk
+          mkdir -p out
+      - name: Decode exact pinned engine classes and map every class by Stage A mathematics
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C finite rev-parse HEAD)" = e74d8a46e86034096fd9c9231c87f594f17a93bf
+          test "$(git -C clean rev-parse HEAD)" = bed7fc80e5d21d4e4f388764507f818633c377ac
+          m0=${{ matrix.m0 }}
+          case "$m0" in
+            11) expected=e25b8b392161f6f02d933f6a1e78643b3ff95ae3fb69b72b02a36c2c8a5f3a7e ;;
+            12) expected=942c2eed527aa2c327ce2aa5e811c0c64b0c524a46671f4ccb99ee1086ff5479 ;;
+            13) expected=b67d54ab32d0c33ac8b1cbd783fa6579c0f7423a342c169a58e4b7c8e86bbc94 ;;
+          esac
+          keys="finite/independent/y131-floor-cert-freeze-20261110/work/design/out/core_keys_m$m0.bin"
+          test "$(sha256sum "$keys" | cut -d' ' -f1)" = "$expected"
+          python3 -I -B stageb/engine_key_decoder.py --keys-file "$keys" --m0 "$m0" --pin-sha256 "$expected" --output out/engine.hbp
+          ulimit -v 2000000
+          /usr/bin/time -v -o out/lookup-memory.txt ./bulk < out/engine.hbp > out/mapping.hbp
+          python3 - <<'PY' | tee out/bijection.hbp
+          import gzip,pathlib,re
+          m0=int("${{ matrix.m0 }}")
+          path=pathlib.Path(f'clean/results/main/rows-m{m0}.hbp.gz')
+          StageA={}
+          with gzip.open(path,'rt',encoding='ascii') as f:
+              for line in f:
+                  if line.startswith('R|'):
+                      a=dict(x.split('=',1) for x in line.rstrip('\n').split('|')[1:] if '=' in x)
+                      key=int(a['key'])
+                      assert key not in StageA
+                      StageA[key]=(int(a['M']),int(a['size']),int(a['W']))
+          seen=set()
+          count=0
+          for raw in pathlib.Path('out/mapping.hbp').read_text().splitlines():
+              assert raw.startswith('B|'),raw
+              b=dict(x.split('=',1) for x in raw.split('|')[1:] if '=' in x)
+              k=int(b['stage_key'])
+              assert k in StageA, f'class_not_found|engine={b["engine"]}|stage_key={k}'
+              assert k not in seen, f'class_collision|engine={b["engine"]}|stage_key={k}'
+              seen.add(k)
+              assert StageA[k]==(int(b['M']),int(b['size']),int(b['W'])), f'class_metadata_or_M_mismatch|engine={b["engine"]}|stage_key={k}'
+              count+=1
+          assert seen==set(StageA), f'bijection_not_onto|missing={len(set(StageA)-seen)}'
+          assert len(seen)==count
+          print(f'BIJECTION|m0={m0}|engine_classes={count}|stageA_classes={len(StageA)}|injective=PASS|surjective=PASS|M=PASS|source_derived_metadata=AGREEMENT|r9_runs=0')
+          mem=pathlib.Path('out/lookup-memory.txt').read_text()
+          a=re.findall(r'Maximum resident set size \(kbytes\):\s*(\d+)',mem)
+          assert len(a)==1 and 0<int(a[0])<2097152,'RESOURCE_LIMIT_EXCEEDED'
+          print('RESOURCE|process=StageA_bulk_lookup|peak_kib='+a[0]+'|PASS')
+          PY
+          sha256sum out/mapping.hbp | tee out/mapping.sha256
+      - name: Archive complete mapping and evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stageb-class-map-m${{ matrix.m0 }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: |
+            out/mapping.hbp
+            out/mapping.sha256
+            out/bijection.hbp
+            out/lookup-memory.txt
