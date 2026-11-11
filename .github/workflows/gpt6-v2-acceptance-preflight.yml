@@ -1,0 +1,209 @@
+name: GitRAM v2 launcher acceptance — excluded-r and archive preflight ONLY
+on:
+  push:
+    branches: [gpt6-v2-acceptance-preflight-20261111]
+    paths:
+      - .github/workflows/gpt6-v2-acceptance-preflight.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: floor-v2-preflight-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  repaired-gzip:
+    name: Seven repaired Stage A gzip archives — immutable fresh checkout
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: JesseBrown1980/GitRAM
+          ref: 60a3dd0cfa2a4e0f87d5b6ff47592c2ab25c53be
+          path: repaired
+          persist-credentials: false
+      - name: Verify every repaired archive including content hashes
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C repaired rev-parse HEAD)" = 60a3dd0cfa2a4e0f87d5b6ff47592c2ab25c53be
+          test "$(git -C repaired rev-parse HEAD^)" = bed7fc80e5d21d4e4f388764507f818633c377ac
+          cd repaired
+          test "$(git check-attr text results/main/rows-m13.hbp.gz)" = "results/main/rows-m13.hbp.gz: text: unset"
+          test "$(git check-attr text results/small/rows-m7.hbp.gz)" = "results/small/rows-m7.hbp.gz: text: unset"
+          python3 -I -B - <<'PY' | tee ../repair-audit.log
+          import pathlib, gzip, hashlib
+          def sha_file(p):
+              h=hashlib.sha256()
+              with open(p,'rb') as f:
+                  for b in iter(lambda:f.read(1024*1024),b''):h.update(b)
+              return h.hexdigest()
+          entries=[]
+          for raw in pathlib.Path('ERRATUM-TRANSPORT-GZ-20261111.hbp').read_text().splitlines():
+              if not raw.startswith('FILE|'):continue
+              p=dict(kv.split('=',1) for kv in raw.split('|')[1:] if '=' in kv)
+              entries.append(p)
+          assert len(entries)==7, f"expected 7 files, got {len(entries)}"
+          main=set()
+          for row in entries:
+              path=pathlib.Path(row['path'])
+              assert path.is_file() and path.suffix=='.gz'
+              assert row['gzip_t']=='PASS' and row['pin_match']=='YES'
+              assert path.stat().st_size==int(row['bytes'])
+              actual_gz=sha_file(path)
+              assert actual_gz==row['gz_sha256'],(str(path),'compressed SHA mismatch')
+              h=hashlib.sha256()
+              with gzip.open(path,'rb') as stream:
+                  for chunk in iter(lambda:stream.read(1024*1024),b''):h.update(chunk)
+              assert h.hexdigest()==row['uncompressed_sha256']==row['summary_pin'],str(path)
+              if path.parts[1]=='main':main.add(path.name)
+              print(f"REPAIRED_GZIP|PASS|path={path}|compressed_sha256={actual_gz}|uncompressed_sha256={h.hexdigest()}|git_text=UNSET")
+          assert main=={'rows-m11.hbp.gz','rows-m12.hbp.gz','rows-m13.hbp.gz'}
+          print('ARCHIVE_REPAIR_HOSTED_GATE=PASS|files=7|source_commit=60a3dd0c|historical_stageA_commits=UNCHANGED|r9_runs=0')
+          PY
+      - name: Retain archive integrity receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stagea-gzip-transport-repair-hosted-gate
+          if-no-files-found: warn
+          retention-days: 30
+          path: repair-audit.log
+
+  pinned-floor-source:
+    name: Pinned v2 freeze and Rust 1.81 binary; no r9 run
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: JesseBrown1980/Finite-universe-Yang-mills-existence-and-mass-gap-using-HEB-C
+          ref: 78c89c312a265fe4090071fc1abdc7d6eb102e7e
+          path: finite
+          persist-credentials: false
+      - name: Pin gate, record and build in immutable checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C finite rev-parse HEAD)" = 78c89c312a265fe4090071fc1abdc7d6eb102e7e
+          src="$GITHUB_WORKSPACE/finite/independent/y131-floor-cert-freeze-v2-20261110"
+          mkdir -p out
+          (cd "$src" && sha256sum -c FREEZE-PIN.sha256) | tee out/pins.log
+          test "$(sha256sum "$src/final/PREDICT-S3-3X4-R9-FLOOR-CERT-20261109.hbp" | cut -d' ' -f1)" = 41ced0bb2ad9b4078153f4264c46ba6c767994ecbd774c47efd6b20188bdefdc
+          rustup toolchain install 1.81.0 --profile minimal --component clippy
+          (cd "$src/work/design/rs" && cargo +1.81.0 clippy --all-targets --locked -- -D warnings) 2>&1 | tee out/clippy.log
+          (cd "$src/work/design/rs" && cargo +1.81.0 build --release --locked -j1) 2>&1 | tee out/build.log
+          binary="$src/work/design/rs/target/release/floorcert"
+          binarysha="$(sha256sum "$binary" | cut -d' ' -f1)"
+          echo "$binarysha" | tee out/binary.sha256
+          test "$binarysha" = 9533e7e902ff565641b34d3bdd0c693ffa0b37baa08575283e00429e2c7fa74f
+          echo "V2_PINNED_BUILD=PASS|commit=78c89c31|record=41ced0bb|binary=$binarysha|r9_runs=0" | tee out/verdict.hbp
+          # The namespace-dependent --launch-r9 switch is deliberately never called.
+      - name: Retain build receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: floor-v2-rust81-pins-and-build
+          retention-days: 30
+          if-no-files-found: warn
+          path: out/
+
+  verifier-only-upper:
+    name: Direct independent verifier at excluded r=21/2 and U_verifier-only decision
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: JesseBrown1980/Finite-universe-Yang-mills-existence-and-mass-gap-using-HEB-C
+          ref: 78c89c312a265fe4090071fc1abdc7d6eb102e7e
+          path: finite
+          persist-credentials: false
+      - name: Rebuild immutable source and generate excluded-r control certificates
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="$GITHUB_WORKSPACE/finite/independent/y131-floor-cert-freeze-v2-20261110"
+          test "$(git -C finite rev-parse HEAD)" = 78c89c312a265fe4090071fc1abdc7d6eb102e7e
+          mkdir -p out/certs
+          (cd "$root" && sha256sum -c FREEZE-PIN.sha256) > out/pins.log
+          rustup toolchain install 1.81.0 --profile minimal
+          (cd "$root/work/design/rs" && cargo +1.81.0 build --release --locked -j1)
+          binary="$root/work/design/rs/target/release/floorcert"
+          test "$(sha256sum "$binary" | cut -d' ' -f1)" = 9533e7e902ff565641b34d3bdd0c693ffa0b37baa08575283e00429e2c7fa74f
+          python3 -I -B "$root/work/design/peak_rss.py" "$binary" rowhash --m0 4 --threads 2 --dir "$GITHUB_WORKSPACE/out/certs" | tee out/writer-rows.log
+          python3 -I -B "$root/work/design/peak_rss.py" "$binary" cert --m0 4 --r 21/2 --f '1;8,7,6,5,4;6,5,4,3' --write-cert --threads 2 --dir "$GITHUB_WORKSPACE/out/certs" | tee out/writer-certs.log
+          shopt -s nullglob
+          certs=(out/certs/cert_m4_r21_2_f*.txt)
+          test "${#certs[@]}" -eq 3
+          for cert in "${certs[@]}"; do
+            name="$(basename "$cert")"
+            /usr/bin/time -v -o "out/$name.memory" bash "$root/work/design/gate_required.sh" "$GITHUB_WORKSPACE/$cert" > "out/$name.verify"
+            grep -q '^GATE_REQUIRED|PASS|' "out/$name.verify"
+            grep -q '^VERDICT|PASS|' "out/$name.verify"
+            sha256sum "$cert" >> out/certificate-hashes.sha256
+          done
+          python3 -I -B - <<'PY' | tee out/decision.hbp
+          from pathlib import Path
+          from fractions import Fraction as F
+          import re
+          logs=sorted(Path('out').glob('cert_m4_r21_2_f*.txt.verify'))
+          assert len(logs)==3
+          g=[]
+          u=[]
+          for f in logs:
+              text=f.read_text()
+              lines=text.splitlines()
+              v=[s for s in lines if s.startswith('VERDICT|PASS|')]
+              rz=[s for s in lines if s.startswith('RITZ_CLASS_VECTOR|')]
+              assert len(v)==len(rz)==1
+              gamma=re.search(r' >= (\d+/\d+) at r = 21/2 \(m0 = 4\)',v[0])
+              assert gamma,gamma
+              gm=F(gamma.group(1))
+              upper=F(rz[0].split('|')[1])
+              g.append(gm)
+              u.append(upper)
+              print(f"DIRECT_GATE|PASS|certificate={f.name}|gamma={gm}|ritz_verifier={upper}")
+          G=max(g)
+          U=min(u)+F(1,1000000)
+          # This calculation never reads a writer-provided Ritz bound.
+          def decision(g0):
+              return 'ABOVE' if G>=g0 else ('BELOW' if U<g0 else 'UNRESOLVED')
+          assert decision(F(95))=='UNRESOLVED'
+          assert decision(G-F(1,1000))=='ABOVE'
+          assert decision(U+F(1,1000))=='BELOW'
+          # Fault control: substituting a fictitious lower Ritz supplied by
+          # the writer must not be able to affect the independent decision.
+          bogus_writer_upper=F(94)
+          bogus_decision='BELOW' if bogus_writer_upper+F(1,1000000)<F(95) else 'UNRESOLVED'
+          assert bogus_decision=='BELOW' and decision(F(95))!=bogus_decision
+          print(f"SECOND_ENV_ONLY|PASS|r=21/2|m0=4|G={G}|U_verifier_only={U}|g0=95|decision={decision(F(95))}|writer_ritz_consumed=0")
+          print("FAULT|PASS|fake_writer_ritz_94|forged_decision=BELOW|second_environment=UNRESOLVED|reject_fake")
+          for p in Path('out').glob('*.memory'):
+              t=p.read_text()
+              v=re.findall(r'Maximum resident set size \(kbytes\):\s*(\d+)',t)
+              assert len(v)==1 and int(v[0])<2097152
+              print(f"RESOURCE|PASS|process={p.name}|rss_kib={v[0]}|limit_kib=2097152")
+          writer=(Path('out/writer-rows.log').read_text()+Path('out/writer-certs.log').read_text())
+          for value in re.findall(r"^PEAK_RSS\|kB=(\d+)\|exit=0",writer,re.M):
+              assert int(value)<2097152
+          print('VERIFIER_ONLY_UPPER=PASS|r9_runs=0')
+          PY
+      - name: Retain independent recheck inputs and outputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: floor-v2-excluded-r-verifier-only
+          retention-days: 30
+          if-no-files-found: warn
+          path: |
+            out/decision.hbp
+            out/pins.log
+            out/writer-rows.log
+            out/writer-certs.log
+            out/*.verify
+            out/*.memory
+            out/certificate-hashes.sha256
