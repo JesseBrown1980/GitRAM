@@ -25,6 +25,7 @@ jobs:
           ref: 60a3dd0cfa2a4e0f87d5b6ff47592c2ab25c53be
           path: repaired
           persist-credentials: false
+          fetch-depth: 2
       - name: Verify every repaired archive including content hashes
         shell: bash
         run: |
