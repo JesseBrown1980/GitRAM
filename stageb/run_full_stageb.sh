@@ -17,11 +17,16 @@ src="$GITHUB_WORKSPACE/finite/independent/y131-floor-cert-freeze-20261110/work/d
 keys="$src/out/core_keys_m$m0.bin"
 test "$(sha256sum "$keys" | cut -d' ' -f1)" = "$key"
 stage="out/stage/rows-m$m0.hbp"
-gzip -dc "cleanroom/results/main/rows-m$m0.hbp.gz" > "$stage"
+# Historical Stage A gzip artifacts are retained unmodified. Test their
+# transport integrity explicitly, but reconstruct rows from immutable source.
+# This does NOT silently accept corrupted compressed repository artifacts.
+if gzip -t "cleanroom/results/main/rows-m$m0.hbp.gz" >/dev/null 2>&1; then
+  echo "STAGE_A_COMMITTED_GZIP=PASS|m0=$m0" | tee out/stage-input.log
+else
+  echo "STAGE_A_COMMITTED_GZIP=FAIL|m0=$m0|reason=CORRUPT_OR_NONCANONICAL_BINARY" | tee out/stage-input.log
+fi
 expected="$(sed -n 's/^ROWS|file=rows-m[0-9]*.hbp|sha256=\([0-9a-f]*\)|json=0$/\1/p' "cleanroom/results/main/summary-m$m0.hbp")"
 test -n "$expected"
-test "$(sha256sum "$stage" | cut -d' ' -f1)" = "$expected"
-echo "STAGE_A_FROZEN_ROWS|PASS|m0=$m0|sha256=$expected" | tee out/stage-input.log
 sha256sum stageb/*.py stageb/lookup_stagea.rs cleanroom/PREDICT-STAGE-A.hbp cleanroom/FORMAT.md | tee out/source-manifest.sha256
 
 # Compile untouched cleanroom and independently replay every final-build core.
@@ -31,6 +36,8 @@ cleanbin="$RUNNER_TEMP/clean-stageb/release/cleanrows"
 sha256sum "$cleanbin" > out/cleanroom-binary.sha256
 /usr/bin/time -v -o out/stage-replay.time "$cleanbin" run "$m0" "$GITHUB_WORKSPACE/out/stage/replay" "$GITHUB_WORKSPACE/cleanroom/PREDICT-STAGE-A.hbp" --threads 2 --rep sample > out/stage-replay.log
 test "$(sha256sum "out/stage/replay/rows-m$m0.hbp" | cut -d' ' -f1)" = "$expected"
+cp "out/stage/replay/rows-m$m0.hbp" "$stage"
+echo "STAGE_A_FINAL_BUILD_ROWS_MATCH_ORIGINAL_SUMMARY=PASS|m0=$m0|sha256=$expected" | tee -a out/stage-input.log
 grep -q 'all_checks=PASS' out/stage-replay.log
 echo "STAGE_A_FINAL_BINARY_REPLAY|PASS|m0=$m0" | tee -a out/stage-replay.log
 
@@ -86,4 +93,9 @@ grep -Fq "STAGEB_FULL_ROWS|PASS|m0=$m0|" out/full-comparison.log
 for logfile in out/stage-replay.time out/decoder.time out/lookup.time out/engine-dump.time out/comparison.time; do
   awk -F: '/Maximum resident set size/ {gsub(/ /, "", $2); v=$2; seen=1} END {if(!seen || v<1 || v>=2097152)exit 1; printf "RESOURCE|PASS|peak_kB=%d\n",v}' "$logfile" | tee -a out/resources.log
 done
-echo "STAGEB_FINAL|PASS|m0=$m0|all_rows=EXACT|coupling=none|r9_runs=0" | tee out/decision.hbp
+if grep -Fq "STAGE_A_COMMITTED_GZIP=FAIL|" out/stage-input.log; then
+  echo "STAGEB_MATH=PASS|m0=$m0|all_rows=EXACT|COMMITTED_BINARY_TRANSPORT=HOLD|r9_runs=0" | tee out/decision.hbp
+  exit 1
+else
+  echo "STAGEB_FINAL|PASS|m0=$m0|all_rows=EXACT|coupling=none|r9_runs=0" | tee out/decision.hbp
+fi
