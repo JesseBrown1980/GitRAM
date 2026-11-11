@@ -91,7 +91,7 @@ gzip -n -c out/engine-transport.hbp > out/engine-transport.hbp.gz
 grep -Fq "STAGEB_FULL_ROWS|PASS|m0=$m0|" out/full-comparison.log
 
 for logfile in out/stage-replay.time out/decoder.time out/lookup.time out/engine-dump.time out/comparison.time; do
-  awk -F: '/Maximum resident set size/ {gsub(/ /, "", $2); v=$2; seen=1} END {if(!seen || v<1 || v>=2097152)exit 1; printf "RESOURCE|PASS|peak_kB=%d\n",v}' "$logfile" | tee -a out/resources.log
+  awk -F: '/Maximum resident set size/ {gsub(/ /, "", $2); v=$2+0; seen=1} END {if(!seen || v<1 || v>=2097152)exit 1; printf "RESOURCE|PASS|peak_kB=%d\n",v}' "$logfile" | tee -a out/resources.log
 done
 if grep -Fq "STAGE_A_COMMITTED_GZIP=FAIL|" out/stage-input.log; then
   echo "STAGEB_MATH=PASS|m0=$m0|all_rows=EXACT|COMMITTED_BINARY_TRANSPORT=HOLD|r9_runs=0" | tee out/decision.hbp
