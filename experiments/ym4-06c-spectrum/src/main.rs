@@ -6,6 +6,7 @@
 #![forbid(unsafe_code)]
 #![deny(clippy::float_arithmetic, clippy::float_cmp, clippy::cast_precision_loss)]
 mod sha256;
+mod m6;
 use sha256::hash_bytes;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::env;
@@ -372,6 +373,7 @@ fn prove_gap2187(){
 }
 fn execute() {
     let lat=Lattice::new();
+    let m6_count=m6::certify(&lat);
     let (flat,_,orb,reps,size)=classes(&lat);
     let (g,m,a1,a2)=gram(&lat,&flat);
     let c=physical(&g,&orb,&reps,&size);
@@ -380,6 +382,14 @@ fn execute() {
     block.push_str("YM4_06C|model=3D_2x2x2_S3|method=rooted_two_hop_exact_gram_and_21_phys_sector|rust=1.81|trinary=YES|json=0\n");
     block.push_str(&format!("ENUM|flat_rooted={NF}|flat_phys={NC}|one_step_states={a1}|two_step_states={a2}|one_link_moves={}|two_link_moves={}|json=0\n",NF*NL*3,NF*NL*NL*9));
     for (mag,n) in m{block.push_str(&format!("TWO_STEP_MAG|mag={mag}|states={n}|json=0\n"));}
+    block.push_str(&format!("MAGNETIC6|rooted_states={m6_count}|gauge_orbits=36|supports=12|states_per_support=18|internal_one_move_edges=0|json=0\n"));
+    for r in [81u64,2187] {
+        let numerator=6*r*(2*r-72)-5184;
+        let denominator=2*r-72;
+        let upper_num=6*r*(r*r-144)+9*r;
+        let upper_den=r*r-144;
+        block.push_str(&format!("CLUSTER_TWO_SIDED|r={r}|lower_gt_num={numerator}|lower_den={denominator}|upper_le_num={upper_num}|upper_den={upper_den}|observable=E22_minus_E21_over_JE|method=magnetic6_Feshbach_21flat|json=0\n"));
+    }
     block.push_str(&format!("CHARPOLY|matrix_dim={NC}|matrix_scaling={L}|maximum_row_sum=14021568|20_primes_modular_CRT=PASS|root_intervals=INTEGER_EXACT|json=0\n"));
     block.push_str(&roots_and_bounds());
     for row in &c {
